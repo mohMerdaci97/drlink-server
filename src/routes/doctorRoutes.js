@@ -5,7 +5,8 @@ const {
 } = require("../controllers/doctorController");
 const auth = require("../middlewares/authMiddleware");
 
-router.post("/complete_profile", auth, createProfile);
+router.post("/complete_profile", auth, upload.single("photo"), createProfile);
+
 router.get("/specialties", getDoctorSpecialities);
 
 module.exports = router;

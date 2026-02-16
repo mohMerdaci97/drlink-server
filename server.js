@@ -28,6 +28,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/doctor", doctorRoutes);
 
+app.use("/uploads", require("express").static("uploads"));
+
 sequelize
   .authenticate()
   .then(() => {

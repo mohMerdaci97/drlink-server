@@ -10,10 +10,13 @@ exports.createProfile = async (req, res) => {
       return res.status(400).json({ message: "Profil déjà créé." });
     }
 
+    const photo_url = req.file ? `/uploads/doctors/${req.file.filename}` : null;
+
     const doctor = await Doctor.create({
       user_id: userId,
       description,
       specialty_id,
+      photo_url,
       is_approved: false,
     });
 
