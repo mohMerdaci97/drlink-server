@@ -4,7 +4,7 @@ const auth = require("../middlewares/authMiddleware");
 
 router.get(
   "/me",
-  auth(), // token required
+  auth(), 
   (req, res) => {
     res.json({
       message: "Profil utilisateur",

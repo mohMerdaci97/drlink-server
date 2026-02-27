@@ -4,8 +4,9 @@ const {
   getDoctorSpecialities,
 } = require("../controllers/doctorController");
 const auth = require("../middlewares/authMiddleware");
+const upload = require("../middlewares/upload");
 
-router.post("/complete_profile", auth, upload.single("photo"), createProfile);
+router.post("/complete_profile", auth(), upload.single("photo"), createProfile);
 
 router.get("/specialties", getDoctorSpecialities);
 
