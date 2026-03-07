@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
-  return sequelize.define(
+  const Clinic = sequelize.define(
     "Clinic",
     {
       id: {
@@ -41,4 +41,18 @@ module.exports = (sequelize) => {
       updatedAt: false,
     },
   );
+
+  Clinic.associate = (models) => {
+    Clinic.belongsTo(models.Wilaya, {
+      foreignKey: "wilaya_id",
+      as: "Wilaya",
+    });
+
+    Clinic.belongsTo(models.Commune, {
+      foreignKey: "commune_id",
+      as: "Commune",
+    });
+  };
+
+  return Clinic;
 };

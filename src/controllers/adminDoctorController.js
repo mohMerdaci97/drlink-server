@@ -1,5 +1,14 @@
-const { Doctor, User, Specialty } = require("../models");
 const { getPagination, getPagingData } = require("../helpers/pagination");
+
+const {
+  Doctor,
+  User,
+  Specialty,
+  DoctorClinic,
+  Clinic,
+  Wilaya,
+  Commune,
+} = require("../models");
 
 exports.getAll = async (req, res) => {
   try {
@@ -30,17 +39,57 @@ exports.getAll = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const doctor = await Doctor.findByPk(req.params.id, {
-      include: [User, Specialty],
+      include: [
+        {
+          model: User,
+          attributes: ["email", "full_name", "is_active"],
+        },
+        {
+          model: Specialty,
+          attributes: ["id", "name"],
+        },
+
+        // Clinics
+        {
+          model: Clinic,
+          as: "Clinics",
+          attributes: ["id", "name", "address"],
+          include: [
+            {
+              model: Wilaya,
+              as: "Wilaya",
+              attributes: ["id", "name_fr"],
+            },
+            {
+              model: Commune,
+              as: "Commune",
+              attributes: ["id", "name_fr"],
+            },
+          ],
+        },
+
+        // Schedules
+        {
+          model: DoctorClinic,
+          attributes: ["clinic_id", "day_of_week", "start_time", "end_time"],
+        },
+      ],
     });
 
     if (!doctor) {
-      return res.status(404).json({ message: "Doctor not found" });
+      return res.status(404).json({
+        message: "Doctor not found",
+      });
     }
 
     res.json(doctor);
   } catch (error) {
     console.error("Get doctor error:", error);
-    res.status(500).json({ message: "Failed to fetch doctor" });
+
+    res.status(500).json({
+      message: "Failed to fetch doctor",
+      error: error.message,
+    });
   }
 };
 
