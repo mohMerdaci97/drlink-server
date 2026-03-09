@@ -1,9 +1,22 @@
 const { Specialty } = require("../models");
+const { getPagination, getPagingData } = require("../helpers/pagination");
+exports.getAll = async (req, res) => {
+  try {
+    const { page, limit, offset } = getPagination(req.query);
 
-exports.getAll = async (_, res) => {
-  res.json(await Specialty.findAll());
+    const result = await Specialty.findAndCountAll({
+      limit,
+      offset,
+      order: [["id", "DESC"]],
+    });
+
+    const response = getPagingData(result, page, limit);
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-
 exports.create = async (req, res) => {
   const specialty = await Specialty.create(req.body);
   res.json(specialty);

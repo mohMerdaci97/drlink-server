@@ -11,8 +11,12 @@ const Wilaya = require("./Wilaya")(sequelize);
 const Commune = require("./Commune")(sequelize);
 
 // User ↔ Patient
-User.hasOne(Patient, { foreignKey: "user_id", onDelete: "CASCADE" });
-Patient.belongsTo(User, { foreignKey: "user_id" });
+User.hasOne(Patient, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  as: "patient",
+});
+Patient.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
 // User ↔ Doctor
 User.hasOne(Doctor, { foreignKey: "user_id", onDelete: "CASCADE" });

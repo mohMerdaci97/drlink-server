@@ -3,7 +3,7 @@ const stats = require("../controllers/adminStatsController");
 const doctors = require("../controllers/adminDoctorController");
 const specialties = require("../controllers/adminSpecialtyController");
 const appointments = require("../controllers/adminAppointmentController");
-
+const patients = require("../controllers/adminPatientsController");
 router.get("/stats", stats.getStats);
 
 router.get("/doctors", doctors.getAll);
@@ -16,6 +16,10 @@ router.get("/specialties", specialties.getAll);
 router.post("/specialties", specialties.create);
 router.put("/specialties/:id", specialties.update);
 router.delete("/specialties/:id", specialties.remove);
+
+router.get("/patients", patients.getAll);
+router.get("/patients/:id", patients.getOne);
+router.patch("/patients/:id/toggle", patients.toggleActive);
 
 router.get("/appointments", appointments.getAll);
 
