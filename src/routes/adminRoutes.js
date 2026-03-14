@@ -4,6 +4,8 @@ const doctors = require("../controllers/adminDoctorController");
 const specialties = require("../controllers/adminSpecialtyController");
 const appointments = require("../controllers/adminAppointmentController");
 const patients = require("../controllers/adminPatientsController");
+const reports = require("../controllers/adminReportsController");
+
 router.get("/stats", stats.getStats);
 
 router.get("/doctors", doctors.getAll);
@@ -22,5 +24,7 @@ router.get("/patients/:id", patients.getOne);
 router.patch("/patients/:id/toggle", patients.toggleActive);
 
 router.get("/appointments", appointments.getAll);
+
+router.get("/reports", reports.getReports);
 
 module.exports = router;
