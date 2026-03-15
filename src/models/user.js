@@ -8,16 +8,20 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+
       phone: {
         type: DataTypes.STRING,
         unique: true,
         allowNull: false,
       },
+
       email: DataTypes.STRING,
+
       password_hash: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
+
       role: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -28,6 +32,13 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: true,
       },
+
+      is_super: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+
       onboarding_status: {
         type: DataTypes.ENUM("pending_profile", "pending_approval", "active"),
         allowNull: false,
