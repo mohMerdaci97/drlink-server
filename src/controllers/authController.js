@@ -7,9 +7,11 @@ exports.register = async (req, res) => {
     const { full_name, phone, email, password, role } = req.body;
 
     if (!full_name || !phone || !password || !role) {
-      return res.status(400).json({
-        message: "Tous les champs obligatoires doivent être remplis.",
-      });
+      return res
+        .status(400)
+        .json({
+          message: "Tous les champs obligatoires doivent être remplis.",
+        });
     }
 
     if (!["doctor", "patient"].includes(role)) {
@@ -60,6 +62,7 @@ exports.register = async (req, res) => {
         full_name: user.full_name,
         email: user.email,
         is_super: false,
+        onboarding_status: user.onboarding_status,
       },
     });
   } catch (error) {
@@ -119,6 +122,7 @@ exports.login = async (req, res) => {
         full_name: user.full_name,
         email: user.email,
         is_super: user.is_super ?? false,
+        onboarding_status: user.onboarding_status ?? "active",
       },
     });
   } catch (error) {
