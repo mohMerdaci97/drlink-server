@@ -33,6 +33,17 @@ module.exports = (sequelize) => {
       phone: {
         type: DataTypes.STRING(20),
       },
+      created_by_doctor_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+      },
+
+      is_private: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     {
       tableName: "clinics",
@@ -51,6 +62,12 @@ module.exports = (sequelize) => {
     Clinic.belongsTo(models.Commune, {
       foreignKey: "commune_id",
       as: "Commune",
+    });
+
+    Clinic.belongsTo(models.Doctor, {
+      foreignKey: "created_by_doctor_id",
+      as: "Owner",
+      constraints: false,
     });
   };
 
