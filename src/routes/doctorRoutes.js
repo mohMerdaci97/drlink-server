@@ -4,12 +4,18 @@ const upload = require("../middlewares/upload");
 
 const doctorController = require("../controllers/doctorController");
 const doctorStats = require("../controllers/doctorStatsController");
-const doctorAppointments = require("../controllers/doctorappointmentcontroller");
-const doctorPatients = require("../controllers/doctorpatientscontroller");
-const doctorClinics = require("../controllers/doctorclinicscontroller");
+const doctorAppointments = require("../controllers/doctorAppointmentController");
+const doctorPatients = require("../controllers/doctorPatientsController");
+const doctorClinics = require("../controllers/doctorClinicsController");
+const doctorProfile = require("../controllers/doctorProfileController");
+const location = require("../controllers/locationController");
 
 // Public
 router.get("/specialties", doctorController.getDoctorSpecialities);
+
+// Wilayas & Communes
+router.get("/wilayas", location.getWilayas);
+router.get("/wilayas/:wilayaId/communes", location.getCommunesByWilaya);
 
 router.use(auth(["doctor"]));
 
@@ -22,6 +28,16 @@ router.post(
 
 // Dashboard stats
 router.get("/stats", doctorStats.getStats);
+
+// Profile
+router.get("/profile", doctorProfile.getProfile);
+router.patch("/profile", doctorProfile.updateProfile);
+router.patch(
+  "/profile/photo",
+  upload.single("photo"),
+  doctorProfile.updatePhoto,
+);
+router.patch("/profile/password", doctorProfile.changePassword);
 
 // Appointments
 router.get("/appointments/today", doctorAppointments.getToday);

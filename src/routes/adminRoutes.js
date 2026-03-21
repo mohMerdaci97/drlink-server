@@ -12,7 +12,12 @@ const patients = require("../controllers/adminPatientsController");
 const reports = require("../controllers/adminReportsController");
 const admins = require("../controllers/adminManagementController");
 const profile = require("../controllers/adminProfileController");
+const clinics = require("../controllers/adminClinicsController");
+const location = require("../controllers/locationController");
 
+// Wilayas & Communes
+router.get("/wilayas", location.getWilayas);
+router.get("/wilayas/:wilayaId/communes", location.getCommunesByWilaya);
 // only admins allowed
 router.use(auth(["admin"]));
 
@@ -46,6 +51,13 @@ router.get("/appointments", appointments.getAll);
 
 // Reports
 router.get("/reports", reports.getReports);
+
+// Clinics
+router.get("/clinics", clinics.getAll);
+router.get("/clinics/:id", clinics.getOne);
+router.post("/clinics", clinics.create);
+router.put("/clinics/:id", clinics.update);
+router.delete("/clinics/:id", clinics.remove);
 
 // Admin management
 router.get("/admins", requireSuperAdmin, admins.getAll);

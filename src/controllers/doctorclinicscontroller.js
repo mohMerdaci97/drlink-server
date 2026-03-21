@@ -29,6 +29,9 @@ async function getDoctor(userId) {
 function fmtTime(t) {
   return t ? t.slice(0, 5) : null;
 }
+function fmtCoord(v) {
+  return v != null ? parseFloat(v) : null;
+}
 
 // ── GET /api/doctor/clinics
 exports.getAll = async (req, res) => {
@@ -49,6 +52,8 @@ exports.getAll = async (req, res) => {
             "commune_id",
             "is_private",
             "created_by_doctor_id",
+            "latitude",
+            "longitude",
           ],
           include: [
             {
@@ -63,7 +68,6 @@ exports.getAll = async (req, res) => {
       order: [["clinic_id", "ASC"]],
     });
 
-    // Group by clinic
     const clinicMap = {};
     for (const row of schedules) {
       const cid = row.clinic_id;
@@ -78,6 +82,8 @@ exports.getAll = async (req, res) => {
           commune: row.Clinic.Commune?.name_fr ?? null,
           is_private: row.Clinic.is_private,
           is_own: row.Clinic.created_by_doctor_id === doctor.id,
+          latitude: fmtCoord(row.Clinic.latitude),
+          longitude: fmtCoord(row.Clinic.longitude),
           schedule: [],
         };
       }
@@ -107,7 +113,6 @@ exports.getAll = async (req, res) => {
 };
 
 // ── GET /api/doctor/clinics/available ────────────────────────────────────────
-// Public clinics (admin-created) + doctor's own private clinics — NOT other doctors' private clinics
 exports.getAvailable = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);
@@ -126,7 +131,6 @@ exports.getAvailable = async (req, res) => {
     const clinics = await Clinic.findAll({
       where: {
         ...nameWhere,
-        // Show: public clinics (is_private=false) OR this doctor's own private clinics
         [Op.or]: [
           { is_private: false },
           { is_private: true, created_by_doctor_id: doctor.id },
@@ -139,13 +143,14 @@ exports.getAvailable = async (req, res) => {
         "phone",
         "is_private",
         "created_by_doctor_id",
+        "latitude",
+        "longitude",
       ],
       include: [
         { model: Wilaya, as: "Wilaya", attributes: ["name_fr", "code"] },
         { model: Commune, as: "Commune", attributes: ["name_fr"] },
       ],
       order: [
-        // Own clinics first
         [
           Clinic.sequelize.literal(
             `CASE WHEN created_by_doctor_id = ${doctor.id} THEN 0 ELSE 1 END`,
@@ -169,6 +174,8 @@ exports.getAvailable = async (req, res) => {
         is_private: c.is_private,
         is_own: c.created_by_doctor_id === doctor.id,
         already_linked: linkedIds.includes(c.id),
+        latitude: fmtCoord(c.latitude),
+        longitude: fmtCoord(c.longitude),
       })),
     });
   } catch (err) {
@@ -180,11 +187,11 @@ exports.getAvailable = async (req, res) => {
 };
 
 // ── POST /api/doctor/clinics ──────────────────────────────────────────────────
-// Doctor creates their own private cabinet then immediately links it
 exports.createClinic = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);
-    const { name, address, phone, wilaya_id, commune_id } = req.body;
+    const { name, address, phone, wilaya_id, commune_id, latitude, longitude } =
+      req.body;
 
     if (!name?.trim())
       return res
@@ -205,9 +212,10 @@ exports.createClinic = async (req, res) => {
       commune_id,
       is_private: true,
       created_by_doctor_id: doctor.id,
+      latitude: fmtCoord(latitude),
+      longitude: fmtCoord(longitude),
     });
 
-    // Auto-link with a default Monday slot so it shows in the list
     await DoctorClinic.create({
       doctor_id: doctor.id,
       clinic_id: clinic.id,
@@ -225,6 +233,8 @@ exports.createClinic = async (req, res) => {
         phone: clinic.phone,
         is_private: true,
         is_own: true,
+        latitude: fmtCoord(clinic.latitude),
+        longitude: fmtCoord(clinic.longitude),
       },
     });
   } catch (err) {
@@ -235,7 +245,7 @@ exports.createClinic = async (req, res) => {
   }
 };
 
-// Doctor can edit ONLY their own private clinic info
+// ── PATCH /api/doctor/clinics/:clinicId ──────────────────────────────────────
 exports.updateClinic = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);
@@ -253,10 +263,12 @@ exports.updateClinic = async (req, res) => {
         .status(404)
         .json({ message: "Cabinet introuvable ou non modifiable." });
 
-    const { name, address, phone } = req.body;
+    const { name, address, phone, latitude, longitude } = req.body;
     if (name?.trim()) clinic.name = name.trim();
     if (address?.trim()) clinic.address = address.trim();
     clinic.phone = phone?.trim() ?? clinic.phone;
+    if (latitude !== undefined) clinic.latitude = fmtCoord(latitude);
+    if (longitude !== undefined) clinic.longitude = fmtCoord(longitude);
     await clinic.save();
 
     res.json({
@@ -266,6 +278,8 @@ exports.updateClinic = async (req, res) => {
         name: clinic.name,
         address: clinic.address,
         phone: clinic.phone,
+        latitude: fmtCoord(clinic.latitude),
+        longitude: fmtCoord(clinic.longitude),
       },
     });
   } catch (err) {
@@ -275,7 +289,7 @@ exports.updateClinic = async (req, res) => {
   }
 };
 
-// ── POST /api/doctor/clinics/:clinicId/schedule
+// ── POST /api/doctor/clinics/:clinicId/schedule ───────────────────────────────
 exports.addSchedule = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);
@@ -291,7 +305,6 @@ exports.addSchedule = async (req, res) => {
         .status(400)
         .json({ message: "L'heure de fin doit être après le début." });
 
-    // Verify clinic is visible to this doctor (public or own private)
     const clinic = await Clinic.findOne({
       where: {
         id: clinicId,
@@ -378,7 +391,6 @@ exports.removeSchedule = async (req, res) => {
 };
 
 // ── DELETE /api/doctor/clinics/:clinicId ─────────────────────────────────────
-// Unlink + if it was the doctor's own private clinic → delete the clinic too
 exports.removeClinic = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);
@@ -392,7 +404,7 @@ exports.removeClinic = async (req, res) => {
         .status(404)
         .json({ message: "Clinique non trouvée dans votre liste." });
 
-    // If it was their own private cabinet with no other doctors → delete the clinic record too
+    // Delete private cabinet if no other doctors remain
     const clinic = await Clinic.findOne({
       where: {
         id: clinicId,
@@ -401,10 +413,10 @@ exports.removeClinic = async (req, res) => {
       },
     });
     if (clinic) {
-      const otherLinks = await DoctorClinic.count({
+      const others = await DoctorClinic.count({
         where: { clinic_id: clinicId },
       });
-      if (otherLinks === 0) await clinic.destroy();
+      if (others === 0) await clinic.destroy();
     }
 
     res.json({ message: "Clinique retirée de votre liste." });
