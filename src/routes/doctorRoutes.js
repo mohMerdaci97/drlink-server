@@ -45,6 +45,11 @@ router.get("/appointments", doctorAppointments.getAll);
 router.patch("/appointments/:id/confirm", doctorAppointments.confirm);
 router.patch("/appointments/:id/cancel", doctorAppointments.cancel);
 router.patch("/appointments/:id/complete", doctorAppointments.complete);
+router.patch(
+  "/profile/reset-password",
+  auth(["doctor"]),
+  doctorProfile.resetPassword,
+);
 
 // Patients
 router.get("/patients", doctorPatients.getAll);

@@ -4,8 +4,8 @@ const {
   Doctor,
   User,
   Specialty,
-  DoctorClinic,
   Clinic,
+  DoctorClinic,
   Wilaya,
   Commune,
 } = require("../models");
@@ -40,15 +40,23 @@ exports.getOne = async (req, res) => {
   try {
     const doctor = await Doctor.findByPk(req.params.id, {
       include: [
+        // User info
         {
           model: User,
-          attributes: ["email", "full_name", "is_active"],
+          attributes: [
+            "id",
+            "full_name",
+            "email",
+            "phone",
+            "onboarding_status",
+            "is_active",
+          ],
         },
+        // Specialty
         {
           model: Specialty,
           attributes: ["id", "name"],
         },
-
         // Clinics
         {
           model: Clinic,
@@ -67,8 +75,7 @@ exports.getOne = async (req, res) => {
             },
           ],
         },
-
-        // Schedules
+        // Doctor Schedules 
         {
           model: DoctorClinic,
           attributes: ["clinic_id", "day_of_week", "start_time", "end_time"],
@@ -82,14 +89,42 @@ exports.getOne = async (req, res) => {
       });
     }
 
-    res.json(doctor);
+    const response = {
+      id: doctor.id,
+      description: doctor.description,
+      photo_url: doctor.photo_url,
+      is_approved: doctor.is_approved,
+      User: doctor.User,
+      Specialty: doctor.Specialty,
+      Clinics: doctor.Clinics,
+      DoctorClinics: doctor.DoctorClinics,
+    };
+
+    res.json(response);
   } catch (error) {
     console.error("Get doctor error:", error);
-
     res.status(500).json({
       message: "Failed to fetch doctor",
       error: error.message,
     });
+  }
+};
+exports.approve = async (req, res) => {
+  try {
+    const doctor = await Doctor.findByPk(req.params.id, {
+      include: [{ model: User }],
+    });
+
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+
+    await doctor.update({ is_approved: true });
+
+    await doctor.User.update({ onboarding_status: "active" });
+
+    res.json({ message: "Doctor approved" });
+  } catch (error) {
+    console.error("Approve doctor error:", error);
+    res.status(500).json({ message: "Failed to approve doctor" });
   }
 };
 

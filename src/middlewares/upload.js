@@ -13,8 +13,10 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+    // Use doctor's user_id as filename — same doctor always overwrites same file
+
+    const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+    cb(null, `doctor_${req.user.id}${ext}`);
   },
 });
 

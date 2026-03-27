@@ -1,3 +1,4 @@
+// src/models/doctor.js
 const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
@@ -14,23 +15,22 @@ module.exports = (sequelize) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      photo_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
       specialty_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-          model: "specialties",
-          key: "id",
-        },
+        references: { model: "specialties", key: "id" },
         onUpdate: "CASCADE",
         onDelete: "SET NULL",
       },
       user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
+        references: { model: "users", key: "id" },
       },
     },
     {

@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const sequelize = require("./src/config/database");
 
 require("./src/models");
@@ -14,16 +15,32 @@ const doctorRoutes = require("./src/routes/doctorRoutes");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 100 : 500, // higher limit in dev
+  message: {
+    success: false,
+    message: "Too many requests, please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(limiter);
+
+// CORS
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-app.get("/", (req, res) => {
-  res.send("DrLink server is running");
-});
-
-//routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/admin", adminRoutes);
@@ -32,6 +49,9 @@ app.use("/api/doctor", doctorRoutes);
 
 app.use("/uploads", require("express").static("uploads"));
 
+app.get("/", (req, res) => res.send("DrLink server is running"));
+
+// Start server after DB connection
 sequelize
   .authenticate()
   .then(() => {

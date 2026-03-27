@@ -7,8 +7,8 @@ async function getDoctor(userId) {
   return doctor;
 }
 
-// ── GET /api/doctor/patients ──────────────────────────────────────────────────
-// Unique patients who booked with this doctor
+// ── GET /api/doctor/patients
+
 exports.getAll = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);

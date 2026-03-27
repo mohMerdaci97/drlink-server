@@ -1,77 +1,11 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User, Patient, Doctor } = require("../models");
+const { User } = require("../models");
 
-exports.register = async (req, res) => {
-  try {
-    const { full_name, phone, email, password, role } = req.body;
-
-    if (!full_name || !phone || !password || !role) {
-      return res
-        .status(400)
-        .json({
-          message: "Tous les champs obligatoires doivent être remplis.",
-        });
-    }
-
-    if (!["doctor", "patient"].includes(role)) {
-      return res.status(400).json({ message: "Role invalide." });
-    }
-
-    const existingUser = await User.findOne({ where: { phone } });
-    if (existingUser) {
-      return res
-        .status(409)
-        .json({ message: "Ce numéro de téléphone est déjà utilisé." });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    let is_active = true;
-    let onboarding_status = "active";
-    if (role === "doctor") {
-      is_active = false;
-      onboarding_status = "pending_profile";
-    }
-
-    const user = await User.create({
-      full_name,
-      phone,
-      email,
-      password_hash: hashedPassword,
-      role,
-      is_active,
-      onboarding_status,
-    });
-
-    const token = jwt.sign(
-      { id: user.id, role: user.role, is_super: false },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
-
-    return res.status(201).json({
-      message:
-        role === "doctor" ? "Compte médecin créé." : "Compte patient créé.",
-      token,
-      role: user.role,
-      onboarding_status: user.onboarding_status,
-      is_active: user.is_active,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        is_super: false,
-        onboarding_status: user.onboarding_status,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ message: "Erreur serveur lors de l'inscription." });
-  }
-};
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/tokens");
 
 exports.login = async (req, res) => {
   try {
@@ -83,7 +17,10 @@ exports.login = async (req, res) => {
         .json({ message: "Téléphone et mot de passe requis." });
     }
 
-    const user = await User.findOne({ where: { phone } });
+    const normalizedPhone = phone.trim();
+
+    const user = await User.findOne({ where: { phone: normalizedPhone } });
+
     if (!user) {
       return res
         .status(401)
@@ -91,44 +28,110 @@ exports.login = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
+
     if (!isMatch) {
       return res
         .status(401)
         .json({ message: "Téléphone ou mot de passe incorrect." });
     }
 
-    if (!user.is_active && user.role !== "doctor") {
-      return res
-        .status(403)
-        .json({ message: "Compte désactivé. Contactez l'administrateur." });
+    if (!user.is_active) {
+      return res.status(403).json({
+        message: "Compte désactivé. Contactez l'administrateur.",
+      });
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        role: user.role,
-        is_super: user.is_super ?? false,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    if (!["admin", "doctor"].includes(user.role)) {
+      return res.status(403).json({ message: "Rôle non autorisé." });
+    }
+
+    // Generate tokens from utils
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    //  Cookies
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.json({
-      message: "Connexion réussie.",
-      token,
+      token: accessToken, 
       role: user.role,
       user: {
         id: user.id,
         full_name: user.full_name,
-        email: user.email,
-        is_super: user.is_super ?? false,
-        onboarding_status: user.onboarding_status ?? "active",
+        onboarding_status: user.onboarding_status,
+        is_super: user.is_super,
       },
     });
-  } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ message: "Erreur serveur lors de la connexion." });
+  } catch (err) {
+    console.error("Login error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+      name: err.name,
+    });
+
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+};
+
+//refresh
+exports.refresh = (req, res) => {
+  const token = req.cookies.refresh_token;
+
+  if (!token) return res.sendStatus(401);
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+    const accessToken = generateAccessToken({
+      id: decoded.id,
+      role: decoded.role,
+    });
+
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+    });
+
+    return res.sendStatus(200);
+  } catch {
+    return res.sendStatus(401);
+  }
+};
+
+//  LOGOUT
+exports.logout = (req, res) => {
+  res.clearCookie("access_token");
+  res.clearCookie("refresh_token");
+  return res.sendStatus(200);
+};
+
+// current user
+
+exports.me = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ["id", "full_name", "role", "onboarding_status", "is_super"],
+    });
+
+    if (!user) return res.sendStatus(404);
+
+    res.json(user);
+  } catch (err) {
+    console.error("Me error:", err);
+    res.status(500).json({ message: "Erreur serveur." });
   }
 };

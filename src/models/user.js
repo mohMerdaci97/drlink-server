@@ -44,7 +44,13 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: "active",
       },
+      must_change_password: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
+
     {
       tableName: "users",
       timestamps: true,
