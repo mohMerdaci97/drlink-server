@@ -15,6 +15,7 @@ const admins = require("../controllers/adminManagementController");
 const profile = require("../controllers/adminProfileController");
 const clinics = require("../controllers/adminClinicsController");
 const location = require("../controllers/locationController");
+const subscription = require("../controllers/adminSubscriptionController");
 
 // Wilayas & Communes
 router.get("/wilayas", location.getWilayas);
@@ -72,5 +73,32 @@ router.patch(
   admins.resetPassword,
 );
 router.delete("/admins/:id", requireSuperAdmin, admins.remove);
+
+// Plans CRUD
+router.get("/billing/plans", subscription.getPlans);
+router.post("/billing/plans", subscription.createPlan);
+router.patch("/billing/plans/:id", subscription.updatePlan);
+router.delete("/billing/plans/:id", subscription.deletePlan);
+
+// Doctor subscriptions
+router.get("/billing/subscriptions", subscription.getAllSubscriptions);
+router.get(
+  "/billing/subscriptions/doctor/:doctorId",
+  subscription.getDoctorSubscription,
+);
+router.post("/billing/subscriptions", subscription.assignSubscription);
+router.patch(
+  "/billing/subscriptions/:id/renew",
+  subscription.renewSubscription,
+);
+router.patch(
+  "/billing/subscriptions/:id/cancel",
+  subscription.cancelSubscription,
+);
+
+// Payments
+router.post("/billing/subscriptions/:id/payments", subscription.recordPayment);
+router.get("/billing/subscriptions/:id/payments", subscription.getPayments);
+router.delete("/billing/payments/:paymentId", subscription.deletePayment);
 
 module.exports = router;

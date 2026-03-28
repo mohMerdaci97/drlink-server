@@ -9,7 +9,9 @@ const DoctorClinic = require("./doctorClinic")(sequelize);
 const Appointment = require("./appointment")(sequelize);
 const Wilaya = require("./Wilaya")(sequelize);
 const Commune = require("./Commune")(sequelize);
-
+const Plan = require("./plan")(sequelize);
+const DoctorSubscription = require("./doctorSubscription")(sequelize);
+const SubscriptionPayment = require("./subscriptionPayment")(sequelize);
 // User ↔ Patient
 User.hasOne(Patient, {
   foreignKey: "user_id",
@@ -80,6 +82,49 @@ Clinic.belongsTo(Commune, {
   as: "Commune",
 });
 
+// Plan → Subscriptions
+Plan.hasMany(DoctorSubscription, {
+  foreignKey: "plan_id",
+  as: "Subscriptions",
+});
+DoctorSubscription.belongsTo(Plan, {
+  foreignKey: "plan_id",
+  as: "Plan",
+});
+
+// Doctor → Subscriptions
+Doctor.hasMany(DoctorSubscription, {
+  foreignKey: "doctor_id",
+  as: "Subscriptions",
+});
+DoctorSubscription.belongsTo(Doctor, {
+  foreignKey: "doctor_id",
+  as: "Doctor",
+});
+
+// Subscription → Payments
+DoctorSubscription.hasMany(SubscriptionPayment, {
+  foreignKey: "subscription_id",
+  as: "Payments",
+});
+SubscriptionPayment.belongsTo(DoctorSubscription, {
+  foreignKey: "subscription_id",
+});
+
+// Payment → Doctor & Plan
+SubscriptionPayment.belongsTo(Doctor, {
+  foreignKey: "doctor_id",
+});
+SubscriptionPayment.belongsTo(Plan, {
+  foreignKey: "plan_id",
+});
+
+// Payment → Admin (User)
+SubscriptionPayment.belongsTo(User, {
+  foreignKey: "recorded_by",
+  as: "RecordedBy",
+});
+
 module.exports = {
   sequelize,
   User,
@@ -91,4 +136,7 @@ module.exports = {
   Appointment,
   Wilaya,
   Commune,
+  Plan,
+  DoctorSubscription,
+  SubscriptionPayment,
 };

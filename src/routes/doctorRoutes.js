@@ -64,4 +64,21 @@ router.post("/clinics/:clinicId/schedule", doctorClinics.addSchedule);
 router.patch("/clinics/schedule/:scheduleId", doctorClinics.updateSchedule);
 router.delete("/clinics/schedule/:scheduleId", doctorClinics.removeSchedule);
 router.delete("/clinics/:clinicId", doctorClinics.removeClinic);
+
+router.get("/subscription", auth(["doctor"]), async (req, res) => {
+  const { DoctorSubscription, Plan } = require("../models");
+  const doctor = await require("../models").Doctor.findOne({
+    where: { user_id: req.user.id },
+  });
+  if (!doctor) return res.json(null);
+  const sub = await DoctorSubscription.findOne({
+    where: {
+      doctor_id: doctor.id,
+      status: { [require("sequelize").Op.in]: ["active", "grace", "expired"] },
+    },
+    order: [["created_at", "DESC"]],
+    include: [{ model: Plan, as: "Plan" }],
+  });
+  res.json(sub ?? null);
+});
 module.exports = router;
