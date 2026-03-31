@@ -8,8 +8,6 @@ const {
   Specialty,
 } = require("../models");
 
-// ── PLANS
-
 exports.getPlans = async (req, res) => {
   try {
     const plans = await Plan.findAll({ order: [["price_dzd", "ASC"]] });
@@ -59,11 +57,41 @@ exports.deletePlan = async (req, res) => {
   }
 };
 
-// ── SUBSCRIPTIONS
+// ── SUBSCRIPTIONS ─────────────────────────────────────────────────────────────
 
+// GET /api/admin/billing/subscriptions?page=1&limit=15&status=active&search=
 exports.getAllSubscriptions = async (req, res) => {
   try {
-    const subs = await DoctorSubscription.findAll({
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 15);
+    const offset = (page - 1) * limit;
+    const { status, search } = req.query;
+
+    // Build doctor filter from search
+    let doctorIdFilter = undefined;
+    if (search?.trim()) {
+      const matchingUsers = await User.findAll({
+        where: { full_name: { [Op.iLike]: `%${search.trim()}%` } },
+        attributes: ["id"],
+      });
+      const userIds = matchingUsers.map((u) => u.id);
+      const matchingDoctors = await Doctor.findAll({
+        where: { user_id: { [Op.in]: userIds } },
+        attributes: ["id"],
+      });
+      doctorIdFilter = matchingDoctors.map((d) => d.id);
+    }
+
+    const where = {};
+    if (status) where.status = status;
+    if (doctorIdFilter !== undefined)
+      where.doctor_id = { [Op.in]: doctorIdFilter };
+
+    const { count, rows } = await DoctorSubscription.findAndCountAll({
+      where,
+      limit,
+      offset,
+      distinct: true,
       order: [["created_at", "DESC"]],
       include: [
         { model: Plan, as: "Plan" },
@@ -78,10 +106,27 @@ exports.getAllSubscriptions = async (req, res) => {
             { model: Specialty, attributes: ["name"] },
           ],
         },
+        // ← THIS is what was missing: Payments must be included here
+        {
+          model: SubscriptionPayment,
+          as: "Payments",
+          order: [["paid_at", "DESC"]],
+          include: [
+            { model: User, as: "RecordedBy", attributes: ["full_name"] },
+          ],
+        },
       ],
     });
-    res.json(subs);
+
+    res.json({
+      data: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit),
+    });
   } catch (e) {
+    console.error("getAllSubscriptions:", e);
     res.status(500).json({ message: e.message });
   }
 };
@@ -121,7 +166,6 @@ exports.assignSubscription = async (req, res) => {
       reference,
       notes,
     } = req.body;
-
     if (!doctor_id || !plan_id)
       return res.status(400).json({ message: "doctor_id et plan_id requis." });
 
@@ -138,7 +182,6 @@ exports.assignSubscription = async (req, res) => {
           })()
         : null;
 
-    // Cancel any existing active sub
     await DoctorSubscription.update(
       { status: "cancelled" },
       { where: { doctor_id, status: { [Op.in]: ["active", "grace"] } } },
@@ -153,14 +196,12 @@ exports.assignSubscription = async (req, res) => {
       notes,
     });
 
-    // Re-enable doctor if they were disabled
     const doctor = await Doctor.findByPk(doctor_id, {
       include: [{ model: User }],
     });
     if (doctor?.User && !doctor.User.is_active)
       await doctor.User.update({ is_active: true });
 
-    // Record initial payment if provided
     if (amount_dzd != null && paid_at) {
       await SubscriptionPayment.create({
         subscription_id: sub.id,
@@ -191,12 +232,10 @@ exports.renewSubscription = async (req, res) => {
 
     const { amount_dzd, paid_at, payment_method, reference, notes } = req.body;
 
-    // Extend from today or from current expiry if still in the future
     const base =
       sub.expires_at && new Date(sub.expires_at) > new Date()
         ? new Date(sub.expires_at)
         : new Date();
-
     const newExpiry = new Date(base);
     newExpiry.setDate(newExpiry.getDate() + sub.Plan.duration_days);
 
@@ -206,14 +245,12 @@ exports.renewSubscription = async (req, res) => {
       grace_ends_at: null,
     });
 
-    // Re-enable doctor if disabled
     const doctor = await Doctor.findByPk(sub.doctor_id, {
       include: [{ model: User }],
     });
     if (doctor?.User && !doctor.User.is_active)
       await doctor.User.update({ is_active: true });
 
-    // Record payment
     if (amount_dzd != null && paid_at) {
       await SubscriptionPayment.create({
         subscription_id: sub.id,
@@ -246,8 +283,7 @@ exports.cancelSubscription = async (req, res) => {
   }
 };
 
-// ── PAYMENTS
-
+// ── PAYMENTS ──────────────────────────────────────────────────────────────────
 exports.recordPayment = async (req, res) => {
   try {
     const sub = await DoctorSubscription.findByPk(req.params.id);

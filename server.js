@@ -3,10 +3,14 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
-const sequelize = require("./src/config/database");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const morgan = require("morgan");
 
+const sequelize = require("./src/config/database");
 require("./src/models");
 
+// Routes
 const authRoutes = require("./src/routes/authRoutes");
 const locationRoutes = require("./src/routes/locationRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
@@ -15,51 +19,74 @@ const doctorRoutes = require("./src/routes/doctorRoutes");
 
 const app = express();
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 100 : 500, // higher limit in dev
-  message: {
-    success: false,
-    message: "Too many requests, please try again later.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+//  Security headers
+app.use(helmet());
 
-app.use(limiter);
+//  Logger (dev only)
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));
+}
 
-// CORS
+//  Cookies (REQUIRED for your auth)
+app.use(cookieParser());
+
+//  CORS
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   }),
 );
 
+//  Body parsing
 app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
+//  Global rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 100 : 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", limiter);
+
+//  Static files
+app.use("/uploads", express.static("uploads"));
+
+//  Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/doctor", doctorRoutes);
 
-app.use("/uploads", require("express").static("uploads"));
+// Health check
+app.get("/", (req, res) => {
+  res.send("DrLink API is running 🚀");
+});
 
-app.get("/", (req, res) => res.send("DrLink server is running"));
+//  404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
-// Start server after DB connection
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log("Database connected successfully");
-    app.listen(process.env.PORT, () => {
-      console.log(`Server running on port ${process.env.PORT}`);
+//  Global error handling
+app.use((err, req, res, next) => {
+  console.error("GLOBAL ERROR:", err);
+  res.status(500).json({ message: "Internal server error" });
+});
+
+// start server
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log(" Database connected");
+
+    app.listen(process.env.PORT || 5000, () => {
+      console.log(` Server running on port ${process.env.PORT || 5000}`);
     });
-  })
-  .catch((err) => {
-    console.error("Database connection error:", err.message);
-  });
+  } catch (err) {
+    console.error("❌ DB connection failed:", err.message);
+  }
+})();

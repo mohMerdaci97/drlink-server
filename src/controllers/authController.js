@@ -12,76 +12,74 @@ exports.login = async (req, res) => {
     const { phone, password } = req.body;
 
     if (!phone || !password) {
-      return res
-        .status(400)
-        .json({ message: "Téléphone et mot de passe requis." });
+      return res.status(400).json({
+        message: "Téléphone et mot de passe requis.",
+      });
     }
 
-    const normalizedPhone = phone.trim();
-
-    const user = await User.findOne({ where: { phone: normalizedPhone } });
+    const user = await User.findOne({
+      where: { phone: phone.trim() },
+    });
 
     if (!user) {
-      return res
-        .status(401)
-        .json({ message: "Téléphone ou mot de passe incorrect." });
+      return res.status(401).json({
+        message: "Identifiants incorrects.",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ message: "Téléphone ou mot de passe incorrect." });
+      return res.status(401).json({
+        message: "Identifiants incorrects.",
+      });
     }
 
     if (!user.is_active) {
       return res.status(403).json({
-        message: "Compte désactivé. Contactez l'administrateur.",
+        message: "Compte désactivé.",
       });
     }
 
     if (!["admin", "doctor"].includes(user.role)) {
-      return res.status(403).json({ message: "Rôle non autorisé." });
+      return res.status(403).json({
+        message: "Accès refusé.",
+      });
     }
 
-    // Generate tokens from utils
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    //  Cookies
+    const isProd = process.env.NODE_ENV === "production";
+
+    // Access token
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
+      secure: isProd,
+      sameSite: isProd ? "Strict" : "Lax",
       maxAge: 15 * 60 * 1000,
     });
 
+    // Refresh token
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProd,
       sameSite: "Strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.json({
-      token: accessToken, 
-      role: user.role,
+      success: true,
       user: {
         id: user.id,
         full_name: user.full_name,
+        role: user.role,
         onboarding_status: user.onboarding_status,
         is_super: user.is_super,
       },
     });
   } catch (err) {
-    console.error("Login error:", {
-      message: err.message,
-      stack: err.stack,
-      code: err.code,
-      name: err.name,
-    });
-
+    console.error("Login error:", err);
     return res.status(500).json({ message: "Erreur serveur." });
   }
 };
@@ -89,7 +87,6 @@ exports.login = async (req, res) => {
 //refresh
 exports.refresh = (req, res) => {
   const token = req.cookies.refresh_token;
-
   if (!token) return res.sendStatus(401);
 
   try {
@@ -104,10 +101,11 @@ exports.refresh = (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Strict",
+      maxAge: 15 * 60 * 1000,
     });
 
     return res.sendStatus(200);
-  } catch {
+  } catch (err) {
     return res.sendStatus(401);
   }
 };
@@ -116,7 +114,8 @@ exports.refresh = (req, res) => {
 exports.logout = (req, res) => {
   res.clearCookie("access_token");
   res.clearCookie("refresh_token");
-  return res.sendStatus(200);
+
+  return res.json({ message: "Déconnexion réussie." });
 };
 
 // current user

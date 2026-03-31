@@ -2,29 +2,29 @@ const jwt = require("jsonwebtoken");
 
 module.exports = (roles = []) => {
   return (req, res, next) => {
-    const authHeader = req.headers.authorization;
+    const token = req.cookies.access_token;
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Accès refusé. Token manquant." });
+    if (!token) {
+      return res.status(401).json({ message: "Non autorisé." });
     }
-
-    const token = authHeader.split(" ")[1];
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;
 
+      // Role check
       if (roles.length && !roles.includes(decoded.role)) {
-        return res.status(403).json({ message: "Permissions insuffisantes." });
+        return res.status(403).json({ message: "Accès interdit." });
       }
 
       next();
     } catch (err) {
-      const message =
-        err.name === "TokenExpiredError"
-          ? "Token expiré. Veuillez vous reconnecter."
-          : "Token invalide.";
-      return res.status(401).json({ message });
+      return res.status(401).json({
+        message:
+          err.name === "TokenExpiredError"
+            ? "Session expirée."
+            : "Token invalide.",
+      });
     }
   };
 };
