@@ -27,7 +27,7 @@ if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
-//  Cookies (REQUIRED for your auth)
+//  Cookies
 app.use(cookieParser());
 
 //  CORS
