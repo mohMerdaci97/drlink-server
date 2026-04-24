@@ -10,12 +10,12 @@ const morgan = require("morgan");
 const sequelize = require("./src/config/database");
 require("./src/models");
 
-// Routes
 const authRoutes = require("./src/routes/authRoutes");
 const locationRoutes = require("./src/routes/locationRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
 const userRoutes = require("./src/routes/userRoutes");
 const doctorRoutes = require("./src/routes/doctorRoutes");
+const patientAuthRoutes = require("./src/routes/patientAuthRoutes");
 
 const app = express();
 
@@ -33,7 +33,7 @@ app.use(cookieParser());
 //  CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: true,
     credentials: true,
   }),
 );
@@ -51,7 +51,6 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
-//  Static files
 app.use("/uploads", express.static("uploads"));
 
 //  Routes
@@ -60,6 +59,7 @@ app.use("/api/locations", locationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/doctor", doctorRoutes);
+app.use("/api/patient/auth", patientAuthRoutes);
 
 // Health check
 app.get("/", (req, res) => {
