@@ -9,7 +9,7 @@ const {
 
 exports.register = async (req, res) => {
   try {
-    const { full_name, email, password } = req.body;
+    const { full_name, email, password, phone } = req.body;
 
     if (!full_name || !email || !password) {
       return res.status(400).json({ message: "Missing fields" });
@@ -20,18 +20,26 @@ exports.register = async (req, res) => {
     if (existing) {
       return res.status(400).json({ message: "Email already used" });
     }
+    if (!phone) {
+      return res.status(400).json({ message: "Phone is required" });
+    }
 
+    const phoneRegex = /^(05|06|07)[0-9]{8}$/;
+
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({ message: "Invalid phone number" });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       full_name,
       email,
+      phone,
       password_hash: hashedPassword,
       role: "patient",
       is_active: true,
     });
 
-    // create patient profile
     await Patient.create({
       user_id: user.id,
     });
@@ -110,7 +118,7 @@ exports.refresh = (req, res) => {
 exports.me = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ["id", "full_name", "email", "role"],
+      attributes: ["id", "full_name", "email", "phone", "role"],
     });
 
     if (!user) return res.sendStatus(404);
@@ -122,7 +130,7 @@ exports.me = async (req, res) => {
   }
 };
 
-// LOGOUT (client handles token deletion)
+// LOGOUT
 exports.logout = async (req, res) => {
   return res.json({ message: "Logged out successfully" });
 };

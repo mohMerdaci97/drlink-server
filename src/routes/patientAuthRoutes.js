@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const controller = require("../controllers/patientAuthController");
-const auth = require("../middlewares/auth.middleware");
+const auth = require("../middlewares/authMiddleware");
 
 const rateLimit = require("express-rate-limit");
 

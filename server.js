@@ -83,8 +83,8 @@ app.use((err, req, res, next) => {
     await sequelize.authenticate();
     console.log(" Database connected");
 
-    app.listen(process.env.PORT || 5000, () => {
-      console.log(` Server running on port ${process.env.PORT || 5000}`);
+    app.listen(process.env.PORT || 5000, "0.0.0.0", () => {
+      console.log(`Server running on port ${process.env.PORT || 5000}`);
     });
   } catch (err) {
     console.error("❌ DB connection failed:", err.message);
