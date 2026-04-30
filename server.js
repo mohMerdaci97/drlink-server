@@ -16,6 +16,7 @@ const adminRoutes = require("./src/routes/adminRoutes");
 const userRoutes = require("./src/routes/userRoutes");
 const doctorRoutes = require("./src/routes/doctorRoutes");
 const patientAuthRoutes = require("./src/routes/patientAuthRoutes");
+const patientRoutes = require("./src/routes/patientRoutes");
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/patient/auth", patientAuthRoutes);
+app.use("/api/patient", patientRoutes);
 
 // Health check
 app.get("/", (req, res) => {

@@ -21,8 +21,16 @@ User.hasOne(Patient, {
 Patient.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
 // User ↔ Doctor
-User.hasOne(Doctor, { foreignKey: "user_id", onDelete: "CASCADE" });
-Doctor.belongsTo(User, { foreignKey: "user_id" });
+User.hasOne(Doctor, {
+  foreignKey: "user_id",
+  as: "doctor",
+  onDelete: "CASCADE",
+});
+
+Doctor.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
 
 Specialty.hasMany(Doctor, { foreignKey: "specialty_id" });
 Doctor.belongsTo(Specialty, { foreignKey: "specialty_id" });
@@ -62,26 +70,25 @@ Appointment.belongsTo(Doctor, { foreignKey: "doctor_id" });
 Appointment.belongsTo(Patient, { foreignKey: "patient_id" });
 Appointment.belongsTo(Clinic, { foreignKey: "clinic_id" });
 
-Wilaya.hasMany(Clinic, {
-  foreignKey: "wilaya_id",
-  as: "Clinics",
-});
-
-Commune.hasMany(Clinic, {
-  foreignKey: "commune_id",
-  as: "Clinics",
-});
-
 Clinic.belongsTo(Wilaya, {
   foreignKey: "wilaya_id",
-  as: "Wilaya",
+  as: "wilaya",
 });
 
 Clinic.belongsTo(Commune, {
   foreignKey: "commune_id",
-  as: "Commune",
+  as: "commune",
 });
 
+Wilaya.hasMany(Clinic, {
+  foreignKey: "wilaya_id",
+  as: "clinics",
+});
+
+Commune.hasMany(Clinic, {
+  foreignKey: "commune_id",
+  as: "clinics",
+});
 // Plan → Subscriptions
 Plan.hasMany(DoctorSubscription, {
   foreignKey: "plan_id",
@@ -114,11 +121,13 @@ SubscriptionPayment.belongsTo(DoctorSubscription, {
 // Payment → Doctor & Plan
 SubscriptionPayment.belongsTo(Doctor, {
   foreignKey: "doctor_id",
-});
-SubscriptionPayment.belongsTo(Plan, {
-  foreignKey: "plan_id",
+  as: "doctor",
 });
 
+SubscriptionPayment.belongsTo(Plan, {
+  foreignKey: "plan_id",
+  as: "plan",
+});
 // Payment → Admin (User)
 SubscriptionPayment.belongsTo(User, {
   foreignKey: "recorded_by",
