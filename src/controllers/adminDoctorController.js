@@ -75,7 +75,7 @@ exports.getOne = async (req, res) => {
             },
           ],
         },
-        // Doctor Schedules 
+        // Doctor Schedules
         {
           model: DoctorClinic,
           attributes: ["clinic_id", "day_of_week", "start_time", "end_time"],

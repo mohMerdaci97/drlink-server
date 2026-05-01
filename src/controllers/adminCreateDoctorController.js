@@ -11,11 +11,9 @@ exports.createDoctor = async (req, res) => {
     if (!phone?.trim())
       return res.status(400).json({ message: "Téléphone requis." });
     if (!temp_password || temp_password.length < 6)
-      return res
-        .status(400)
-        .json({
-          message: "Mot de passe temporaire requis (min 6 caractères).",
-        });
+      return res.status(400).json({
+        message: "Mot de passe temporaire requis (min 6 caractères).",
+      });
 
     // Check phone uniqueness
     const existing = await User.findOne({ where: { phone: phone.trim() } });

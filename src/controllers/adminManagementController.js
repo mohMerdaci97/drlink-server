@@ -58,12 +58,10 @@ exports.create = async (req, res) => {
     }
 
     if (password.length < 8 || !/\d/.test(password)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Le mot de passe doit contenir au moins 8 caractères et un chiffre.",
-        });
+      return res.status(400).json({
+        message:
+          "Le mot de passe doit contenir au moins 8 caractères et un chiffre.",
+      });
     }
 
     const existing = await User.findOne({ where: { phone } });
@@ -181,22 +179,17 @@ exports.resetPassword = async (req, res) => {
     if (!admin) return res.status(404).json({ message: "Admin introuvable." });
 
     if (admin.is_super && !req.user?.is_super) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Impossible de réinitialiser le mot de passe du super admin.",
-        });
+      return res.status(403).json({
+        message: "Impossible de réinitialiser le mot de passe du super admin.",
+      });
     }
 
     const { password } = req.body;
     if (!password || password.length < 8 || !/\d/.test(password)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Le mot de passe doit contenir au moins 8 caractères et un chiffre.",
-        });
+      return res.status(400).json({
+        message:
+          "Le mot de passe doit contenir au moins 8 caractères et un chiffre.",
+      });
     }
 
     admin.password_hash = await bcrypt.hash(password, 12);
@@ -219,11 +212,9 @@ exports.remove = async (req, res) => {
     if (!admin) return res.status(404).json({ message: "Admin introuvable." });
 
     if (admin.is_super) {
-      return res
-        .status(403)
-        .json({
-          message: "Le super administrateur ne peut pas être supprimé.",
-        });
+      return res.status(403).json({
+        message: "Le super administrateur ne peut pas être supprimé.",
+      });
     }
 
     if (admin.id === req.user?.id) {
