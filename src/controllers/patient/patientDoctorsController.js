@@ -65,7 +65,6 @@ exports.getDoctors = async (req, res) => {
               attributes: ["id", lang === "ar" ? "name_ar" : "name_fr"],
             },
           ],
-          limit: 1,
         },
       ],
       limit: parseInt(limit),
