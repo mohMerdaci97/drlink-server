@@ -24,9 +24,7 @@ cron.schedule("0 1 * * *", async () => {
       status: "grace",
       grace_ends_at: graceEnd.toISOString().slice(0, 10),
     });
-    console.log(
-      `[cron] Sub ${sub.id} → grace until ${graceEnd.toISOString().slice(0, 10)}`,
-    );
+    
   }
 
   // grace → expired + disable user account
@@ -42,9 +40,7 @@ cron.schedule("0 1 * * *", async () => {
     await sub.update({ status: "expired" });
     if (sub.Doctor?.User) {
       await sub.Doctor.User.update({ is_active: false });
-      console.log(
-        `[cron] Doctor ${sub.doctor_id} disabled — subscription expired`,
-      );
+     
     }
   }
 });
