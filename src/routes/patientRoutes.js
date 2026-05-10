@@ -17,7 +17,7 @@ router.get("/doctors", doctorsCtrl.getDoctors);
 router.get("/doctors/:id", doctorsCtrl.getDoctorDetail);
 router.get("/doctors/:id/slots", doctorsCtrl.getAvailableSlots);
 
-/*  APPOINTMENTS */
+
 router.get("/appointments", appointmentsCtrl.getMyAppointments);
 router.post("/appointments", appointmentsCtrl.createAppointment);
 router.patch("/appointments/:id/cancel", appointmentsCtrl.cancelAppointment);
