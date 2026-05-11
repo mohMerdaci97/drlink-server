@@ -63,23 +63,23 @@ app.use("/api/doctor", doctorRoutes);
 app.use("/api/patient/auth", patientAuthRoutes);
 app.use("/api/patient", patientRoutes);
 
-// Health check
+
 app.get("/", (req, res) => {
-  res.send("DrLink API is running 🚀");
+  res.send("DrLink API is running ");
 });
 
-//  404 handler
+
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-//  Global error handling
+
 app.use((err, req, res, next) => {
   console.error("GLOBAL ERROR:", err);
   res.status(500).json({ message: "Internal server error" });
 });
 
-// start server
+
 (async () => {
   try {
     await sequelize.authenticate();

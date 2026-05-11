@@ -36,9 +36,8 @@ exports.getDoctors = async (req, res) => {
         {
           model: User,
           as: "user",
-          attributes: ["full_name", "phone"],
-          where: Object.keys(userWhere).length ? userWhere : undefined,
-          required: !!search,
+          attributes: ["id", "full_name"],
+          required: true,
         },
         {
           model: Specialty,
@@ -79,7 +78,7 @@ exports.getDoctors = async (req, res) => {
 
       return {
         id: d.id,
-        name: d.user?.full_name,
+        name: d.user?.full_name || d.User?.full_name || "Doctor",
         specialty_id: d.specialty_id,
         specialty: d.Specialty?.name,
         description: d.description,
@@ -204,7 +203,6 @@ exports.getAvailableSlots = async (req, res) => {
     ];
     const dayOfWeek = days[new Date(date).getDay()];
 
-    // find doctor schedule for this clinic + day
     const schedule = await DoctorClinic.findOne({
       where: {
         doctor_id: id,
@@ -255,7 +253,7 @@ exports.getAvailableSlots = async (req, res) => {
   }
 };
 
-// ── GET /patient/doctors/specialties ─────────
+// GET /patient/doctors/specialties
 exports.getSpecialties = async (req, res) => {
   try {
     const specialties = await Specialty.findAll({
@@ -268,7 +266,7 @@ exports.getSpecialties = async (req, res) => {
   }
 };
 
-// ── GET /patient/doctors/wilayas ─────────────
+//  GET /patient/doctors/wilayas
 exports.getWilayas = async (req, res) => {
   try {
     const lang =
@@ -289,7 +287,7 @@ exports.getWilayas = async (req, res) => {
   }
 };
 
-// ── helper: generate 30-min slots ────────────
+// helper: generate 30-min slots
 function _generateSlots(startTime, endTime, intervalMinutes) {
   const slots = [];
   const [sh, sm] = startTime.split(":").map(Number);

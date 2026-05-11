@@ -54,8 +54,9 @@ exports.getHomeData = async (req, res) => {
       include: [
         {
           model: User,
-          as: "user", 
-          attributes: ["full_name"],
+          as: "user",
+          attributes: ["id", "full_name"],
+          required: true,
         },
         {
           model: Specialty,
@@ -138,7 +139,7 @@ exports.getHomeData = async (req, res) => {
 
       return {
         id: d.id,
-        name: d.User?.full_name || "",
+        name: d.user?.full_name || "",
         specialty: d.Specialty?.name || "",
         photo_url: d.photo_url || null,
         location: communeName || wilayaName || clinic?.name || null,
@@ -155,7 +156,7 @@ exports.getHomeData = async (req, res) => {
     const formattedAppointment = upcomingAppointment
       ? {
           id: upcomingAppointment.id,
-          doctor_name: upcomingAppointment.Doctor?.User?.full_name || "",
+          doctor_name: upcomingAppointment.Doctor?.user?.full_name || "",
           specialty: upcomingAppointment.Doctor?.Specialty?.name || "",
           clinic_name: upcomingAppointment.Clinic?.name || "",
           date: upcomingAppointment.appointment_date,
@@ -164,7 +165,6 @@ exports.getHomeData = async (req, res) => {
         }
       : null;
 
-    // ── 8. RESPONSE ────────────────────────
     return res.status(200).json({
       patient: {
         name: patient.user?.full_name || "",
