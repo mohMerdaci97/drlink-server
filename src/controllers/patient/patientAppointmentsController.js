@@ -8,74 +8,6 @@ const {
 } = require("../../models");
 const { Op } = require("sequelize");
 
-// ── POST /patient/appointments ───────────────
-exports.createAppointment = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { doctor_id, clinic_id, appointment_date, appointment_time } =
-      req.body;
-
-    if (!doctor_id || !clinic_id || !appointment_date || !appointment_time) {
-      return res.status(400).json({ message: "All fields required" });
-    }
-
-    // get patient
-    const patient = await Patient.findOne({ where: { user_id: userId } });
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
-
-    // check slot still available
-    const conflict = await Appointment.findOne({
-      where: {
-        doctor_id,
-        clinic_id,
-        appointment_date,
-        appointment_time,
-        status: { [Op.in]: ["pending", "confirmed"] },
-      },
-    });
-
-    if (conflict) {
-      return res.status(409).json({ message: "Slot already booked" });
-    }
-
-    // check patient doesn't have appointment same time
-    const patientConflict = await Appointment.findOne({
-      where: {
-        patient_id: patient.id,
-        appointment_date,
-        appointment_time,
-        status: { [Op.in]: ["pending", "confirmed"] },
-      },
-    });
-
-    if (patientConflict) {
-      return res
-        .status(409)
-        .json({ message: "You already have an appointment at this time" });
-    }
-
-    const appointment = await Appointment.create({
-      patient_id: patient.id,
-      doctor_id,
-      clinic_id,
-      appointment_date,
-      appointment_time,
-      status: "pending",
-    });
-
-    return res.status(201).json({
-      id: appointment.id,
-      status: appointment.status,
-      appointment_date: appointment.appointment_date,
-      appointment_time: appointment.appointment_time,
-    });
-  } catch (err) {
-    console.error("createAppointment error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ── GET /patient/appointments ────────────────
 exports.getMyAppointments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -83,22 +15,43 @@ exports.getMyAppointments = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const patient = await Patient.findOne({ where: { user_id: userId } });
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
-
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
     const where = { patient_id: patient.id };
-    if (status) where.status = status;
+    if (status) {
+      const statuses = status.split(",").map((s) => s.trim());
+      where.status = statuses.length > 1 ? { [Op.in]: statuses } : statuses[0];
+    }
 
     const { count, rows } = await Appointment.findAndCountAll({
       where,
       include: [
         {
           model: Doctor,
+
+          required: false,
           include: [
-            { model: User, as: "user", attributes: ["full_name"] },
-            { model: Specialty, attributes: ["name"] },
+            {
+              model: User,
+              as: "user", 
+              attributes: ["full_name", "phone"],
+              required: false,
+            },
+            {
+              model: Specialty,
+              attributes: ["id", "name"],
+              required: false,
+            },
           ],
         },
-        { model: Clinic, attributes: ["id", "name", "address"] },
+        {
+          model: Clinic,
+   
+        
+          attributes: ["id", "name", "address", "phone"],
+          required: false,
+        },
       ],
       order: [
         ["appointment_date", "DESC"],
@@ -113,10 +66,11 @@ exports.getMyAppointments = async (req, res) => {
       status: a.status,
       appointment_date: a.appointment_date,
       appointment_time: a.appointment_time,
-      doctor_name: a.Doctor?.user?.full_name,
-      specialty: a.Doctor?.Specialty?.name,
-      clinic_name: a.Clinic?.name,
-      clinic_address: a.Clinic?.address,
+      doctor_name: a.Doctor?.user?.full_name ?? null,
+      specialty: a.Doctor?.Specialty?.name ?? null,
+      photo_url: a.Doctor?.photo_url ?? null,
+      clinic_name: a.Clinic?.name ?? null,
+      clinic_address: a.Clinic?.address ?? null,
     }));
 
     return res.json({
@@ -131,7 +85,69 @@ exports.getMyAppointments = async (req, res) => {
   }
 };
 
-// ── PATCH /patient/appointments/:id/cancel ───
+exports.createAppointment = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { doctor_id, clinic_id, appointment_date, appointment_time } =
+      req.body;
+
+    if (!doctor_id || !clinic_id || !appointment_date || !appointment_time) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const patient = await Patient.findOne({ where: { user_id: userId } });
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    // slot conflict check
+    const conflict = await Appointment.findOne({
+      where: {
+        doctor_id,
+        clinic_id,
+        appointment_date,
+        appointment_time,
+        status: { [Op.in]: ["pending", "confirmed"] },
+      },
+    });
+    if (conflict) {
+      return res.status(409).json({ message: "Slot already booked" });
+    }
+
+    // patient double-booking check
+    const patientConflict = await Appointment.findOne({
+      where: {
+        patient_id: patient.id,
+        appointment_date,
+        appointment_time,
+        status: { [Op.in]: ["pending", "confirmed"] },
+      },
+    });
+    if (patientConflict) {
+      return res.status(409).json({
+        message: "You already have an appointment at this time",
+      });
+    }
+
+    const appt = await Appointment.create({
+      patient_id: patient.id,
+      doctor_id,
+      clinic_id,
+      appointment_date,
+      appointment_time,
+      status: "pending",
+    });
+
+    return res.status(201).json({
+      id: appt.id,
+      status: appt.status,
+      appointment_date: appt.appointment_date,
+      appointment_time: appt.appointment_time,
+    });
+  } catch (err) {
+    console.error("createAppointment error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 exports.cancelAppointment = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -140,22 +156,20 @@ exports.cancelAppointment = async (req, res) => {
     const patient = await Patient.findOne({ where: { user_id: userId } });
     if (!patient) return res.status(404).json({ message: "Patient not found" });
 
-    const appointment = await Appointment.findOne({
+    const appt = await Appointment.findOne({
       where: { id, patient_id: patient.id },
     });
-
-    if (!appointment)
+    if (!appt)
       return res.status(404).json({ message: "Appointment not found" });
 
-    if (!["pending", "confirmed"].includes(appointment.status)) {
+    if (!["pending", "confirmed"].includes(appt.status)) {
       return res
         .status(400)
         .json({ message: "Cannot cancel this appointment" });
     }
 
-    await appointment.update({ status: "cancelled" });
-
-    return res.json({ message: "Appointment cancelled", id: appointment.id });
+    await appt.update({ status: "cancelled" });
+    return res.json({ message: "Cancelled", id: appt.id });
   } catch (err) {
     console.error("cancelAppointment error:", err);
     return res.status(500).json({ message: "Server error" });
