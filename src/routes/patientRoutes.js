@@ -14,9 +14,9 @@ router.get("/home", homeData.getHomeData);
 router.get("/doctors/specialties", doctorsCtrl.getSpecialties);
 router.get("/doctors/wilayas", doctorsCtrl.getWilayas);
 router.get("/doctors", doctorsCtrl.getDoctors);
+router.get("/doctors/nearby", doctorsCtrl.getNearbyDoctors);
 router.get("/doctors/:id", doctorsCtrl.getDoctorDetail);
 router.get("/doctors/:id/slots", doctorsCtrl.getAvailableSlots);
-
 
 router.get("/appointments", appointmentsCtrl.getMyAppointments);
 router.post("/appointments", appointmentsCtrl.createAppointment);

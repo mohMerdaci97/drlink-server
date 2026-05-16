@@ -305,3 +305,133 @@ function _generateSlots(startTime, endTime, intervalMinutes) {
 
   return slots;
 }
+
+// ── GET /patient/doctors/nearby ──────────────
+exports.getNearbyDoctors = async (req, res) => {
+  try {
+    const lang =
+      req.headers["accept-language"]?.split(",")[0]?.split("-")[0] || "ar";
+    const { lat, lng, radius = 5 } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ message: "lat and lng required" });
+    }
+
+    const latF = parseFloat(lat);
+    const lngF = parseFloat(lng);
+    const radiusKm = parseFloat(radius);
+
+    const { sequelize } = require("../../models");
+    const { Op } = require("sequelize");
+
+    // find clinics within radius
+    const clinics = await Clinic.findAll({
+      attributes: [
+        "id",
+        "name",
+        "wilaya_id",
+        "latitude",
+        "longitude",
+        [
+          sequelize.literal(`
+            6371 * acos(
+              cos(radians(${latF})) *
+              cos(radians(latitude)) *
+              cos(radians(longitude) - radians(${lngF})) +
+              sin(radians(${latF})) *
+              sin(radians(latitude))
+            )
+          `),
+          "distance_km",
+        ],
+      ],
+      where: {
+        latitude: { [Op.not]: null },
+        longitude: { [Op.not]: null },
+      },
+      having: sequelize.literal(
+        `6371 * acos(
+          cos(radians(${latF})) *
+          cos(radians(latitude)) *
+          cos(radians(longitude) - radians(${lngF})) +
+          sin(radians(${latF})) *
+          sin(radians(latitude))
+        ) <= ${radiusKm}`,
+      ),
+      order: sequelize.literal("distance_km ASC"),
+      include: [
+        {
+          model: Wilaya,
+          as: "wilaya",
+          attributes: [lang === "ar" ? "name_ar" : "name_fr"],
+          required: false,
+        },
+      ],
+      limit: 30,
+    });
+
+    const clinicIds = clinics.map((c) => c.id);
+    if (clinicIds.length === 0) {
+      return res.json({ doctors: [] });
+    }
+
+    const doctors = await Doctor.findAll({
+      where: { is_approved: true },
+      include: [
+        { model: User, as: "user", attributes: ["full_name"] },
+        { model: Specialty, attributes: ["name"] },
+        {
+          model: Clinic,
+          as: "Clinics",
+          attributes: ["id", "name", "latitude", "longitude"],
+          through: { attributes: [] },
+          where: { id: { [Op.in]: clinicIds } },
+          required: true,
+          include: [
+            {
+              model: Wilaya,
+              as: "wilaya",
+              attributes: [lang === "ar" ? "name_ar" : "name_fr"],
+              required: false,
+            },
+          ],
+        },
+      ],
+      subQuery: false,
+    });
+
+    // map clinic distance back to doctor
+    const clinicDistMap = {};
+    clinics.forEach((c) => {
+      clinicDistMap[c.id] = parseFloat(c.dataValues.distance_km || 0);
+    });
+
+    const result = doctors
+      .map((d) => {
+        const clinic = d.Clinics?.[0];
+        const dist = clinic ? (clinicDistMap[clinic.id] ?? 0) : 0;
+        const wilaya = clinic?.wilaya;
+        return {
+          id: d.id,
+          name: d.user?.full_name,
+          specialty: d.Specialty?.name,
+          photo_url: d.photo_url,
+          clinic_name: clinic?.name,
+          wilaya: lang === "ar" ? wilaya?.name_ar : wilaya?.name_fr,
+          lat: clinic?.latitude ? parseFloat(clinic.latitude) : null,
+          lng: clinic?.longitude ? parseFloat(clinic.longitude) : null,
+          distance_km: Math.round(dist * 10) / 10,
+          rating: 4.8,
+          available: true,
+        };
+      })
+      .filter((d) => d.lat && d.lng);
+
+    result.sort((a, b) => a.distance_km - b.distance_km);
+
+    return res.json({ doctors: result });
+  } catch (err) {
+    console.error("getNearbyDoctors error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
