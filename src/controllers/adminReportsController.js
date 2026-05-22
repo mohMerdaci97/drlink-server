@@ -64,20 +64,17 @@ exports.getReports = async (req, res) => {
       Doctor.count({ where: { is_approved: false } }),
     ]);
 
-    // Active doctors: join to users table
-    // Doctor.belongsTo(User) has no `as` alias → use model: User, no as
     const activeDoctors = await Doctor.count({
       include: [
         {
           model: User,
           where: { is_active: true },
           attributes: [],
-          required: true, // ← INNER JOIN
+          required: true,
         },
       ],
     });
 
-    // Doctors per specialty (top 8) — simple subquery approach to avoid GROUP BY issues
     const doctorsBySpecialtyRaw = await Doctor.findAll({
       where: { is_approved: true, specialty_id: { [Op.ne]: null } },
       attributes: ["specialty_id", [fn("COUNT", col("Doctor.id")), "count"]],
@@ -112,7 +109,7 @@ exports.getReports = async (req, res) => {
       include: [
         {
           model: User,
-          as: "user", // Patient.belongsTo(User, { as: "user" }) in models/index.js
+          as: "user",
           where: { is_active: true },
           attributes: [],
           required: true,

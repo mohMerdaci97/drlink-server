@@ -3,6 +3,7 @@ const router = require("express").Router();
 
 const auth = require("../middlewares/authMiddleware");
 const requireSuperAdmin = require("../middlewares/requireSuperAdmin");
+const uploadSpecialty = require("../middlewares/uploadSpecialty");
 
 const stats = require("../controllers/adminStatsController");
 const doctors = require("../controllers/adminDoctorController");
@@ -40,8 +41,16 @@ router.patch("/doctors/:id/toggle", doctors.toggleActive);
 
 // Specialties
 router.get("/specialties", specialties.getAll);
-router.post("/specialties", specialties.create);
-router.put("/specialties/:id", specialties.update);
+router.post(
+  "/specialties",
+  uploadSpecialty.single("image"),
+  specialties.create,
+);
+router.put(
+  "/specialties/:id",
+  uploadSpecialty.single("image"),
+  specialties.update,
+);
 router.delete("/specialties/:id", specialties.remove);
 
 // Patients
