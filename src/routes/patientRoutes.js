@@ -5,10 +5,16 @@ const auth = require("../middlewares/authMiddleware");
 const homeData = require("../controllers/patientHomeController");
 const doctorsCtrl = require("../controllers/patient/patientDoctorsController");
 const appointmentsCtrl = require("../controllers/patient/patientAppointmentsController");
+const profileCtrl = require("../controllers/patient/patientProfileController");
 
 router.use(auth(["patient"]));
 
 router.get("/home", homeData.getHomeData);
+
+/* PROFILE */
+router.get("/profile", profileCtrl.getProfile);
+router.put("/profile", profileCtrl.updateProfile);
+router.put("/profile/password", profileCtrl.changePassword);
 
 /* DOCTORS */
 router.get("/doctors/specialties", doctorsCtrl.getSpecialties);

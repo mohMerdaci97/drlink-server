@@ -8,11 +8,7 @@ exports.createProfile = async (req, res) => {
     if (!specialty_id)
       return res.status(400).json({ message: "La spécialité est requise." });
 
-    if (!wilaya_id)
-      return res.status(400).json({ message: "La wilaya est requise." });
 
-    if (!commune_id)
-      return res.status(400).json({ message: "La commune est requise." });
 
     const photo_url = req.file ? `/uploads/doctors/${req.file.filename}` : null;
 
@@ -20,13 +16,7 @@ exports.createProfile = async (req, res) => {
     if (!specialty)
       return res.status(400).json({ message: "Spécialité invalide." });
 
-    const wilaya = await Wilaya.findByPk(wilaya_id);
-    if (!wilaya) return res.status(400).json({ message: "Wilaya invalide." });
-
-    const commune = await Commune.findOne({
-      where: { id: commune_id, wilaya_id },
-    });
-    if (!commune) return res.status(400).json({ message: "Commune invalide." });
+   
 
     const existing = await Doctor.findOne({ where: { user_id: userId } });
 
