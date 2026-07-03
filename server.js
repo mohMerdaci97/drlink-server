@@ -17,6 +17,7 @@ const userRoutes = require("./src/routes/userRoutes");
 const doctorRoutes = require("./src/routes/doctorRoutes");
 const patientAuthRoutes = require("./src/routes/patientAuthRoutes");
 const patientRoutes = require("./src/routes/patientRoutes");
+const assistantRoutes = require("./src/routes/assistantRoutes");
 
 const app = express();
 
@@ -62,23 +63,20 @@ app.use("/api/user", userRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/patient/auth", patientAuthRoutes);
 app.use("/api/patient", patientRoutes);
-
+app.use("/api/assistant", assistantRoutes);
 
 app.get("/", (req, res) => {
   res.send("DrLink API is running ");
 });
 
-
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
-
 
 app.use((err, req, res, next) => {
   console.error("GLOBAL ERROR:", err);
   res.status(500).json({ message: "Internal server error" });
 });
-
 
 (async () => {
   try {

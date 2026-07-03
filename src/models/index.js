@@ -12,15 +12,21 @@ const Commune = require("./Commune")(sequelize);
 const Plan = require("./plan")(sequelize);
 const DoctorSubscription = require("./doctorSubscription")(sequelize);
 const SubscriptionPayment = require("./subscriptionPayment")(sequelize);
-
+const Assistant = require("./assistant")(sequelize);
 // ── User ↔ Patient ───────────────────────────────────────────────────────────
-User.hasOne(Patient, { foreignKey: "user_id", onDelete: "CASCADE", as: "patient" });
+User.hasOne(Patient, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  as: "patient",
+});
 Patient.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-
 User.hasOne(Doctor, { foreignKey: "user_id", onDelete: "CASCADE" });
-User.hasOne(Doctor, { foreignKey: "user_id", onDelete: "CASCADE", as: "doctor" });
-
+User.hasOne(Doctor, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+  as: "doctor",
+});
 
 Doctor.belongsTo(User, { foreignKey: "user_id" });
 Doctor.belongsTo(User, { foreignKey: "user_id", as: "user" });
@@ -28,7 +34,6 @@ Doctor.belongsTo(User, { foreignKey: "user_id", as: "user" });
 // ── Specialty ↔ Doctor ───────────────────────────────────────────────────────
 Specialty.hasMany(Doctor, { foreignKey: "specialty_id" });
 Doctor.belongsTo(Specialty, { foreignKey: "specialty_id" });
-
 
 Doctor.belongsToMany(Clinic, {
   through: DoctorClinic,
@@ -71,27 +76,52 @@ Commune.hasMany(Clinic, { foreignKey: "commune_id", as: "Clinics" });
 Commune.hasMany(Clinic, { foreignKey: "commune_id", as: "clinics" });
 
 // ── Plan → DoctorSubscription ────────────────────────────────────────────────
-Plan.hasMany(DoctorSubscription, { foreignKey: "plan_id", as: "Subscriptions" });
+Plan.hasMany(DoctorSubscription, {
+  foreignKey: "plan_id",
+  as: "Subscriptions",
+});
 DoctorSubscription.belongsTo(Plan, { foreignKey: "plan_id", as: "Plan" });
 
 // ── Doctor → DoctorSubscription ──────────────────────────────────────────────
-Doctor.hasMany(DoctorSubscription, { foreignKey: "doctor_id", as: "Subscriptions" });
+Doctor.hasMany(DoctorSubscription, {
+  foreignKey: "doctor_id",
+  as: "Subscriptions",
+});
 DoctorSubscription.belongsTo(Doctor, { foreignKey: "doctor_id", as: "Doctor" });
 
 // ── DoctorSubscription → SubscriptionPayment ─────────────────────────────────
-DoctorSubscription.hasMany(SubscriptionPayment, { foreignKey: "subscription_id", as: "Payments" });
-SubscriptionPayment.belongsTo(DoctorSubscription, { foreignKey: "subscription_id" });
+DoctorSubscription.hasMany(SubscriptionPayment, {
+  foreignKey: "subscription_id",
+  as: "Payments",
+});
+SubscriptionPayment.belongsTo(DoctorSubscription, {
+  foreignKey: "subscription_id",
+});
 
 // ── SubscriptionPayment → Doctor ─────────────────────────────────────────────
 SubscriptionPayment.belongsTo(Doctor, { foreignKey: "doctor_id" });
-SubscriptionPayment.belongsTo(Doctor, { foreignKey: "doctor_id", as: "doctor" });
+SubscriptionPayment.belongsTo(Doctor, {
+  foreignKey: "doctor_id",
+  as: "doctor",
+});
 
 // ── SubscriptionPayment → Plan ───────────────────────────────────────────────
 SubscriptionPayment.belongsTo(Plan, { foreignKey: "plan_id" });
 SubscriptionPayment.belongsTo(Plan, { foreignKey: "plan_id", as: "plan" });
 
-// ── SubscriptionPayment → User (admin recorder) ──────────────────────────────
-SubscriptionPayment.belongsTo(User, { foreignKey: "recorded_by", as: "RecordedBy" });
+//SubscriptionPayment → User (admin recorder)
+SubscriptionPayment.belongsTo(User, {
+  foreignKey: "recorded_by",
+  as: "RecordedBy",
+});
+//User → Assistant
+User.hasOne(Assistant, { foreignKey: "user_id", as: "assistant" });
+Assistant.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+//Doctor → Assistant
+Doctor.hasMany(Assistant, { foreignKey: "doctor_id", as: "assistants" });
+Assistant.belongsTo(Doctor, { foreignKey: "doctor_id", as: "doctor" });
+
 
 module.exports = {
   sequelize,
@@ -105,6 +135,7 @@ module.exports = {
   Wilaya,
   Commune,
   Plan,
+  Assistant,
   DoctorSubscription,
   SubscriptionPayment,
 };

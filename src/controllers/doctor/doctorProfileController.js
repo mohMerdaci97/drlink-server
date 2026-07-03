@@ -7,7 +7,7 @@ const {
   Specialty,
   Appointment,
   DoctorClinic,
-} = require("../models");
+} = require("../../models");
 const { Op } = require("sequelize");
 
 async function getDoctorWithUser(userId) {

@@ -1,4 +1,4 @@
-const { Appointment, Patient, User, Clinic, Doctor } = require("../models");
+const { Appointment, Patient, User, Clinic, Doctor } = require("../../models");
 const { Op, fn, col, literal } = require("sequelize");
 
 async function getDoctor(userId) {

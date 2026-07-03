@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const { User, Doctor } = require("../models");
 const { Op } = require("sequelize");
+const ROLES = require("../constants/roles");
 
 exports.createDoctor = async (req, res) => {
   try {
@@ -36,7 +37,7 @@ exports.createDoctor = async (req, res) => {
       phone: phone.trim(),
       email: email?.trim() || null,
       password_hash,
-      role: "doctor",
+      role: ROLES.DOCTOR,
       is_active: false,
       onboarding_status: "pending_profile",
       must_change_password: true,

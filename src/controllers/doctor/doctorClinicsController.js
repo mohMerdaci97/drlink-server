@@ -1,4 +1,10 @@
-const { Doctor, DoctorClinic, Clinic, Wilaya, Commune } = require("../models");
+const {
+  Doctor,
+  DoctorClinic,
+  Clinic,
+  Wilaya,
+  Commune,
+} = require("../../models");
 const { Op } = require("sequelize");
 
 const DAYS = [

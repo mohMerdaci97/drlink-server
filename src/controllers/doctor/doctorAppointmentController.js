@@ -1,4 +1,4 @@
-const { Appointment, Patient, User, Clinic, Doctor } = require("../models");
+const { Appointment, Patient, User, Clinic, Doctor } = require("../../models");
 const { Op } = require("sequelize");
 
 // ── helper
@@ -111,7 +111,7 @@ exports.getAll = async (req, res) => {
   }
 };
 
-// ── GET /api/doctor/appointments/today 
+// ── GET /api/doctor/appointments/today
 exports.getToday = async (req, res) => {
   try {
     const doctor = await getDoctor(req.user.id);
@@ -145,22 +145,22 @@ exports.getToday = async (req, res) => {
   }
 };
 
-// ── PATCH /api/doctor/appointments/:id/confirm 
+// ── PATCH /api/doctor/appointments/:id/confirm
 exports.confirm = async (req, res) => {
   await changeStatus(req, res, "confirmed");
 };
 
-// ── PATCH /api/doctor/appointments/:id/cancel 
+// ── PATCH /api/doctor/appointments/:id/cancel
 exports.cancel = async (req, res) => {
   await changeStatus(req, res, "cancelled");
 };
 
-// ── PATCH /api/doctor/appointments/:id/complete 
+// ── PATCH /api/doctor/appointments/:id/complete
 exports.complete = async (req, res) => {
   await changeStatus(req, res, "completed");
 };
 
-// ── shared status-change logic 
+// ── shared status-change logic
 async function changeStatus(req, res, newStatus) {
   try {
     const doctor = await getDoctor(req.user.id);

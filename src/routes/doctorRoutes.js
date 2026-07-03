@@ -2,13 +2,14 @@ const router = require("express").Router();
 const auth = require("../middlewares/authMiddleware");
 const upload = require("../middlewares/upload");
 
-const doctorController = require("../controllers/doctorController");
-const doctorStats = require("../controllers/doctorStatsController");
-const doctorAppointments = require("../controllers/doctorAppointmentController");
-const doctorPatients = require("../controllers/doctorPatientsController");
-const doctorClinics = require("../controllers/doctorClinicsController");
-const doctorProfile = require("../controllers/doctorProfileController");
+const doctorController = require("../controllers/doctor/doctorController");
+const doctorStats = require("../controllers/doctor/doctorStatsController");
+const doctorAppointments = require("../controllers/doctor/doctorAppointmentController");
+const doctorPatients = require("../controllers/doctor/doctorPatientsController");
+const doctorClinics = require("../controllers/doctor/doctorClinicsController");
+const doctorProfile = require("../controllers/doctor/doctorProfileController");
 const location = require("../controllers/locationController");
+const doctorAssistantController = require("../controllers/doctor/doctorAssistantController");
 
 // Public
 router.get("/specialties", doctorController.getDoctorSpecialities);
@@ -82,3 +83,10 @@ router.get("/subscription", auth(["doctor"]), async (req, res) => {
   res.json(sub ?? null);
 });
 module.exports = router;
+
+// Assistants
+router.get("/assistants", doctorAssistantController.getAssistants);
+router.get("/assistants/:id", doctorAssistantController.getOne);
+router.post("/assistants", doctorAssistantController.createAssistant);
+router.patch("/assistants/:id", doctorAssistantController.updateAssistant);
+router.delete("/assistants/:id", doctorAssistantController.deleteAssistant);

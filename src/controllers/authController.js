@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { User } = require("../models");
+const ROLES = require("../constants/roles");
 
 const {
   generateAccessToken,
@@ -41,7 +42,9 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (!["admin", "doctor"].includes(user.role)) {
+    const ALLOWED_ROLES = [ROLES.ADMIN, ROLES.DOCTOR, ROLES.ASSISTANT];
+
+    if (!ALLOWED_ROLES.includes(user.role)) {
       return res.status(403).json({
         message: "Accès refusé.",
       });
@@ -52,7 +55,6 @@ exports.login = async (req, res) => {
 
     const isProd = process.env.NODE_ENV === "production";
 
-    // Access token
     res.cookie("access_token", accessToken, {
       httpOnly: true,
       secure: isProd,
@@ -60,7 +62,6 @@ exports.login = async (req, res) => {
       maxAge: 15 * 60 * 1000,
     });
 
-    // Refresh token
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       secure: isProd,
@@ -83,7 +84,6 @@ exports.login = async (req, res) => {
     return res.status(500).json({ message: "Erreur serveur." });
   }
 };
-
 //refresh
 exports.refresh = (req, res) => {
   const token = req.cookies.refresh_token;

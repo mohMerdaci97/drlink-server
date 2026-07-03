@@ -19,11 +19,11 @@ module.exports = (sequelize) => {
 
       password_hash: {
         type: DataTypes.TEXT,
-        allowNull: false,
+        allowNull: true,
       },
 
       role: {
-        type: DataTypes.STRING,
+        type: DataTypes.ENUM("admin", "doctor", "assistant", "patient"),
         allowNull: false,
       },
 

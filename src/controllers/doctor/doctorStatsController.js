@@ -6,7 +6,7 @@ const {
   Clinic,
   DoctorClinic,
   sequelize,
-} = require("../models");
+} = require("../../models");
 const { Op, fn, col, literal } = require("sequelize");
 
 // get doctor record from user_id

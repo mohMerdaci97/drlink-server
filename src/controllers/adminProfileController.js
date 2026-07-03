@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const { User } = require("../models");
-
+const ROLES = require("../constants/roles");
 const SAFE_ATTRS = [
   "id",
   "full_name",

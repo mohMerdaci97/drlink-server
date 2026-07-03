@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { User, Patient } = require("../models");
-
+const ROLES = require("../constants/roles");
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -36,7 +36,7 @@ exports.register = async (req, res) => {
       email,
       phone,
       password_hash: hashedPassword,
-      role: "patient",
+      role: ROLES.PATIENT,
       is_active: true,
     });
 

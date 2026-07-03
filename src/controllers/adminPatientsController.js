@@ -1,12 +1,13 @@
 const { User, Patient } = require("../models");
 const { getPagination, getPagingData } = require("../helpers/pagination");
+const ROLES = require("../constants/roles");
 
 exports.getAll = async (req, res) => {
   try {
     const { page, limit, offset } = getPagination(req.query);
 
     const result = await User.findAndCountAll({
-      where: { role: "patient" },
+      where: { role: ROLES.PATIENT },
       attributes: [
         "id",
         "full_name",
@@ -37,7 +38,7 @@ exports.getAll = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const patient = await User.findOne({
-      where: { id: req.params.id, role: "patient" },
+      where: { id: req.params.id, role: ROLES.PATIENT },
       include: [
         {
           model: Patient,

@@ -8,8 +8,8 @@ const {
   sequelize,
 } = require("../models");
 const { Op, fn, col, literal } = require("sequelize");
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
+const ROLES = require("../constants/roles");
+// ─── helpers
 const startOf = (unit) => {
   const d = new Date();
   if (unit === "week") d.setDate(d.getDate() - d.getDay());
@@ -49,8 +49,8 @@ exports.getReports = async (req, res) => {
       newUsersLastMonth,
     ] = await Promise.all([
       User.count(),
-      User.count({ where: { role: "doctor" } }),
-      User.count({ where: { role: "patient" } }),
+      User.count({ where: { role: ROLES.DOCTOR } }),
+      User.count({ where: { role: ROLES.PATIENT } }),
       User.count({ where: { is_active: true } }),
       User.count({ where: { created_at: { [Op.gte]: thisMonth } } }),
       User.count({
@@ -95,11 +95,11 @@ exports.getReports = async (req, res) => {
     // ── 3. PATIENT STATS ─────────────────────────────────────────────────────
     const [newPatientsThisMonth, newPatientsLastMonth] = await Promise.all([
       User.count({
-        where: { role: "patient", created_at: { [Op.gte]: thisMonth } },
+        where: { role: ROLES.PATIENT, created_at: { [Op.gte]: thisMonth } },
       }),
       User.count({
         where: {
-          role: "patient",
+          role: ROLES.PATIENT,
           created_at: { [Op.between]: [lastMonth, lastMonthEnd] },
         },
       }),

@@ -1,4 +1,4 @@
-const { Doctor, Specialty, User, Wilaya, Commune } = require("../models");
+const { Doctor, Specialty, User, Wilaya, Commune } = require("../../models");
 
 exports.createProfile = async (req, res) => {
   try {
@@ -8,15 +8,11 @@ exports.createProfile = async (req, res) => {
     if (!specialty_id)
       return res.status(400).json({ message: "La spécialité est requise." });
 
-
-
     const photo_url = req.file ? `/uploads/doctors/${req.file.filename}` : null;
 
     const specialty = await Specialty.findByPk(specialty_id);
     if (!specialty)
       return res.status(400).json({ message: "Spécialité invalide." });
-
-   
 
     const existing = await Doctor.findOne({ where: { user_id: userId } });
 

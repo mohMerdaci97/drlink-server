@@ -2,8 +2,8 @@ const bcrypt = require("bcrypt");
 const { User } = require("../models");
 const { getPagination, getPagingData } = require("../helpers/pagination");
 const { Op } = require("sequelize");
+const ROLES = require("../constants/roles");
 
-// ── Safe attributes no password
 const SAFE_ATTRS = [
   "id",
   "full_name",
@@ -19,7 +19,7 @@ exports.getAll = async (req, res) => {
     const { page, limit, offset } = getPagination(req.query);
     const { search } = req.query;
 
-    const where = { role: "admin" };
+    const where = { role: ROLES.ADMIN };
 
     if (search?.trim()) {
       where[Op.or] = [
@@ -85,7 +85,7 @@ exports.create = async (req, res) => {
       phone: phone.trim(),
       email: email?.trim() || null,
       password_hash: hash,
-      role: "admin",
+      role: ROLES.ADMIN,
       is_active: true,
       is_super: false,
       onboarding_status: "active",
@@ -102,7 +102,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const admin = await User.findOne({
-      where: { id: req.params.id, role: "admin" },
+      where: { id: req.params.id, role: ROLES.ADMIN},
     });
 
     if (!admin) return res.status(404).json({ message: "Admin introuvable." });
@@ -140,7 +140,7 @@ exports.update = async (req, res) => {
 exports.toggle = async (req, res) => {
   try {
     const admin = await User.findOne({
-      where: { id: req.params.id, role: "admin" },
+      where: { id: req.params.id, role: ROLES.ADMIN },
     });
 
     if (!admin) return res.status(404).json({ message: "Admin introuvable." });
@@ -173,7 +173,7 @@ exports.toggle = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const admin = await User.findOne({
-      where: { id: req.params.id, role: "admin" },
+      where: { id: req.params.id, role: ROLES.ADMIN},
     });
 
     if (!admin) return res.status(404).json({ message: "Admin introuvable." });
@@ -206,7 +206,7 @@ exports.resetPassword = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const admin = await User.findOne({
-      where: { id: req.params.id, role: "admin" },
+      where: { id: req.params.id, role: ROLES.ADMIN},
     });
 
     if (!admin) return res.status(404).json({ message: "Admin introuvable." });
