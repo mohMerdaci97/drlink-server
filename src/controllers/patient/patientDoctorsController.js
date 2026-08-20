@@ -10,14 +10,14 @@ const {
 } = require("../../models");
 const { Op } = require("sequelize");
 
-// ── GET /patient/doctors ─────────────────────
+// ── GET /patient/doctors
 exports.getDoctors = async (req, res) => {
   try {
     const lang =
       req.headers["accept-language"]?.split(",")[0]?.split("-")[0] || "ar";
     const { specialty_id, wilaya_id, search, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
-
+ 
     const where = { is_approved: true };
 
     if (specialty_id) where.specialty_id = specialty_id;

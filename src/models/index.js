@@ -13,7 +13,9 @@ const Plan = require("./plan")(sequelize);
 const DoctorSubscription = require("./doctorSubscription")(sequelize);
 const SubscriptionPayment = require("./subscriptionPayment")(sequelize);
 const Assistant = require("./assistant")(sequelize);
-// ── User ↔ Patient ───────────────────────────────────────────────────────────
+const DoctorPatient = require("./doctorPatient")(sequelize);
+
+// ── User ↔ Patient 
 User.hasOne(Patient, {
   foreignKey: "user_id",
   onDelete: "CASCADE",
@@ -122,6 +124,26 @@ Assistant.belongsTo(User, { foreignKey: "user_id", as: "user" });
 Doctor.hasMany(Assistant, { foreignKey: "doctor_id", as: "assistants" });
 Assistant.belongsTo(Doctor, { foreignKey: "doctor_id", as: "doctor" });
 
+// ── Doctor ↔ Patient
+
+Doctor.hasMany(DoctorPatient, {
+  foreignKey: "doctor_id",
+  as: "doctorPatients",
+});
+DoctorPatient.belongsTo(Doctor, { foreignKey: "doctor_id", as: "doctor" });
+
+Patient.hasMany(DoctorPatient, {
+  foreignKey: "patient_id",
+  as: "doctorPatients",
+});
+DoctorPatient.belongsTo(Patient, { foreignKey: "patient_id", as: "patient" });
+
+// Who (which assistant/user) created this walk-in link — nullable, app-sourced
+// links won't have one.
+DoctorPatient.belongsTo(User, {
+  foreignKey: "added_by_user_id",
+  as: "addedBy",
+});
 
 module.exports = {
   sequelize,
@@ -136,6 +158,7 @@ module.exports = {
   Commune,
   Plan,
   Assistant,
+  DoctorPatient,
   DoctorSubscription,
   SubscriptionPayment,
 };

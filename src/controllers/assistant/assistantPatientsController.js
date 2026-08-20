@@ -5,6 +5,8 @@ const {
   Assistant,
   Appointment,
   DoctorPatient,
+  Doctor,
+  Clinic,
 } = require("../../models");
 const { getPagination, getPagingData } = require("../../helpers/pagination");
 
@@ -13,7 +15,7 @@ const getAssistant = async (userId) => {
   return Assistant.findOne({ where: { user_id: userId } });
 };
 
-// CREATE PATIENT (walk-in)
+// CREATE PATIENT (walk-in, created by an assistant on behalf of their doctor)
 exports.createPatient = async (req, res) => {
   try {
     const assistant = await getAssistant(req.user.id);
@@ -98,6 +100,7 @@ exports.searchPatients = async (req, res) => {
       include: [
         {
           model: User,
+          as: "user",
           where: {
             [Op.or]: [
               { full_name: { [Op.iLike]: `%${q.trim()}%` } },
@@ -108,6 +111,7 @@ exports.searchPatients = async (req, res) => {
         },
         {
           model: DoctorPatient,
+          as: "doctorPatients",
           where: { doctor_id: assistant.doctor_id },
           attributes: [],
           required: true,
@@ -136,10 +140,12 @@ exports.getPatients = async (req, res) => {
       include: [
         {
           model: User,
+          as: "user",
           attributes: ["id", "full_name", "phone", "created_at"],
         },
         {
           model: DoctorPatient,
+          as: "doctorPatients",
           where: { doctor_id: assistant.doctor_id },
           attributes: ["source", "created_at"],
           required: true,
@@ -174,13 +180,29 @@ exports.getPatient = async (req, res) => {
       include: [
         {
           model: User,
+          as: "user",
           attributes: ["id", "full_name", "phone"],
         },
         {
           model: Appointment,
-          include: ["doctor", "clinic"],
+          // No "as" here: Patient.hasMany(Appointment) in index.js has no
+          // explicit alias, so the include must stay unaliased too.
+          include: [
+            // Nested so the frontend's `a.Doctor?.user?.full_name` resolves.
+            // Appointment.belongsTo(Doctor) has no alias either -> plain
+            // `model: Doctor`, no "as". The User under Doctor DOES need
+            // "as: user" because Doctor->User is explicitly aliased twice
+            // in index.js (one aliased, one not), so it's ambiguous otherwise.
+            {
+              model: Doctor,
+              include: [
+                { model: User, as: "user", attributes: ["id", "full_name"] },
+              ],
+            },
+            { model: Clinic },
+          ],
           limit: 10,
-          order: [["created_at", "DESC"]],
+          order: [["appointment_date", "DESC"]],
         },
       ],
     });
@@ -208,7 +230,7 @@ exports.updatePatient = async (req, res) => {
     if (!link) return res.status(404).json({ message: "Patient introuvable." });
 
     const patient = await Patient.findByPk(req.params.id, {
-      include: [User],
+      include: [{ model: User, as: "user" }],
     });
 
     if (!patient)
@@ -216,12 +238,12 @@ exports.updatePatient = async (req, res) => {
 
     const { full_name, phone, gender, date_of_birth } = req.body;
 
-    if (full_name) patient.User.full_name = full_name.trim();
-    if (phone) patient.User.phone = phone.trim();
+    if (full_name) patient.user.full_name = full_name.trim();
+    if (phone) patient.user.phone = phone.trim();
     if (gender) patient.gender = gender;
     if (date_of_birth) patient.date_of_birth = date_of_birth;
 
-    await patient.User.save();
+    await patient.user.save();
     await patient.save();
 
     res.json({
@@ -235,7 +257,9 @@ exports.updatePatient = async (req, res) => {
 };
 
 // REMOVE PATIENT FROM THIS DOCTOR'S LIST
-
+// Deletes only the doctor_patients link — never the underlying User/Patient
+// identity, since they may belong to other doctors or be a self-registered
+// app user. This is a "remove from my list", not "delete this person".
 exports.removePatientFromMyList = async (req, res) => {
   try {
     const assistant = await getAssistant(req.user.id);
@@ -256,7 +280,12 @@ exports.removePatientFromMyList = async (req, res) => {
   }
 };
 
+// ----------------------------------------------------------------------
+// Extra endpoints that make an assistant's dashboard actually useful day
+// to day, not just CRUD. All scoped to assistant.doctor_id the same way.
+// ----------------------------------------------------------------------
 
+// DASHBOARD SUMMARY — quick numbers for the assistant's home screen
 exports.getDashboardSummary = async (req, res) => {
   try {
     const assistant = await getAssistant(req.user.id);
@@ -312,7 +341,14 @@ exports.getTodaysAppointments = async (req, res) => {
       include: [
         {
           model: Patient,
-          include: [{ model: User, attributes: ["id", "full_name", "phone"] }],
+          // No "as": Appointment.belongsTo(Patient) has no explicit alias.
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "full_name", "phone"],
+            },
+          ],
         },
       ],
       order: [["appointment_time", "ASC"]],
@@ -325,9 +361,7 @@ exports.getTodaysAppointments = async (req, res) => {
   }
 };
 
-// BOOK APPOINTMENT FOR AN EXISTING PATIENT (assistant acting on their behalf)
-// Also (re)links the patient to this doctor if that link doesn't exist yet —
-// e.g. an app-registered patient calling in to book with a new doctor.
+// BOOK APPOINTMENT FOR AN EXISTING PATIENT
 exports.bookAppointmentForPatient = async (req, res) => {
   try {
     const assistant = await getAssistant(req.user.id);
@@ -358,7 +392,7 @@ exports.bookAppointmentForPatient = async (req, res) => {
       clinic_id: clinic_id || null,
       appointment_date,
       appointment_time,
-      status: "confirmed", // assistant-booked appointments can skip the pending step
+      status: "confirmed",
     });
 
     res.status(201).json({
@@ -371,8 +405,7 @@ exports.bookAppointmentForPatient = async (req, res) => {
   }
 };
 
-// RECENTLY ADDED PATIENTS — useful for "did I already add this walk-in"
-// and for a doctor reviewing what their assistant has been doing
+// RECENTLY ADDED PATIENTS
 exports.getRecentlyAddedPatients = async (req, res) => {
   try {
     const assistant = await getAssistant(req.user.id);
@@ -387,7 +420,14 @@ exports.getRecentlyAddedPatients = async (req, res) => {
       include: [
         {
           model: Patient,
-          include: [{ model: User, attributes: ["id", "full_name", "phone"] }],
+          as: "patient",
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "full_name", "phone"],
+            },
+          ],
         },
       ],
       order: [["created_at", "DESC"]],
@@ -397,6 +437,26 @@ exports.getRecentlyAddedPatients = async (req, res) => {
     res.json(links);
   } catch (err) {
     console.error("getRecentlyAddedPatients:", err);
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+};
+
+// GET MY DOCTOR'S CLINICS
+exports.getMyClinics = async (req, res) => {
+  try {
+    const assistant = await getAssistant(req.user.id);
+    if (!assistant)
+      return res.status(404).json({ message: "Assistant introuvable." });
+
+    const doctor = await Doctor.findByPk(assistant.doctor_id, {
+      include: [
+        { model: Clinic, as: "Clinics", attributes: ["id", "name", "address"] },
+      ],
+    });
+
+    res.json(doctor?.Clinics || []);
+  } catch (err) {
+    console.error("getMyClinics:", err);
     res.status(500).json({ message: "Erreur serveur." });
   }
 };

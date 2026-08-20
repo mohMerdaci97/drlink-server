@@ -1,27 +1,46 @@
 const router = require("express").Router();
+
 const auth = require("../middlewares/authMiddleware");
 
+const dashboardController = require("../controllers/assistant/assistantDashboardController");
 const profileController = require("../controllers/assistant/assistantProfileController");
 const patientController = require("../controllers/assistant/assistantPatientsController");
 
 router.use(auth(["assistant"]));
 
-/* ───────── PROFILE ───────── */
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile
+// ─────────────────────────────────────────────────────────────────────────────
+
 router.get("/profile", profileController.getProfile);
 
-/* ───────── APPOINTMENTS ───────── */
-router.get("/appointments/today", profileController.getTodayAppointments);
+router.patch("/profile", profileController.updateProfile);
+
+router.patch("/profile/password", profileController.changePassword);
+
+router.patch("/profile/reset-password", profileController.resetPassword);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard / Appointments
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get("/appointments/today", dashboardController.getTodayAppointments);
+
 router.patch(
   "/appointments/:id/status",
-  profileController.updateAppointmentStatus,
+  dashboardController.updateAppointmentStatus,
 );
 
 router.post("/appointments", patientController.bookAppointmentForPatient);
 
-/* ───────── DASHBOARD ───────── */
 router.get("/dashboard/summary", patientController.getDashboardSummary);
 
-/* ───────── PATIENTS ───────── */
+router.get("/clinics", patientController.getMyClinics);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Patients
+// ─────────────────────────────────────────────────────────────────────────────
+
 router.post("/patients", patientController.createPatient);
 
 router.get("/patients/search", patientController.searchPatients);

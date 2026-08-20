@@ -86,7 +86,7 @@ exports.updateProfile = async (req, res) => {
     const user = await User.findByPk(req.user.id);
     const { full_name, phone, email, description } = req.body;
 
-    // Phone uniqueness check
+
     if (phone && phone !== user.phone) {
       const exists = await User.findOne({
         where: { phone, id: { [Op.ne]: user.id } },
@@ -94,7 +94,7 @@ exports.updateProfile = async (req, res) => {
       if (exists)
         return res.status(400).json({ message: "Ce numéro est déjà utilisé." });
     }
-    // Email uniqueness check
+
     if (email && email !== user.email) {
       const exists = await User.findOne({
         where: { email, id: { [Op.ne]: user.id } },
