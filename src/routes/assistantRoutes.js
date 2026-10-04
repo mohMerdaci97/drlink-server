@@ -8,9 +8,7 @@ const patientController = require("../controllers/assistant/assistantPatientsCon
 
 router.use(auth(["assistant"]));
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Profile
-// ─────────────────────────────────────────────────────────────────────────────
 
 router.get("/profile", profileController.getProfile);
 
@@ -20,9 +18,7 @@ router.patch("/profile/password", profileController.changePassword);
 
 router.patch("/profile/reset-password", profileController.resetPassword);
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Dashboard / Appointments
-// ─────────────────────────────────────────────────────────────────────────────
 
 router.get("/appointments/today", dashboardController.getTodayAppointments);
 
@@ -37,9 +33,9 @@ router.get("/dashboard/summary", patientController.getDashboardSummary);
 
 router.get("/clinics", patientController.getMyClinics);
 
-// ─────────────────────────────────────────────────────────────────────────────
+router.get("/slots", patientController.getAvailableSlots);
+
 // Patients
-// ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/patients", patientController.createPatient);
 

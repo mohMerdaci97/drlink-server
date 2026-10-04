@@ -1,92 +1,272 @@
 const router = require("express").Router();
+
 const auth = require("../middlewares/authMiddleware");
 const upload = require("../middlewares/upload");
+const clinicUpload = require("../middlewares/clinicUpload");
+const validate = require("../middlewares/validate");
 
-const doctorController = require("../controllers/doctor/doctorController");
-const doctorStats = require("../controllers/doctor/doctorStatsController");
-const doctorAppointments = require("../controllers/doctor/doctorAppointmentController");
-const doctorPatients = require("../controllers/doctor/doctorPatientsController");
-const doctorClinics = require("../controllers/doctor/doctorClinicsController");
-const doctorProfile = require("../controllers/doctor/doctorProfileController");
+// Controllers
+const doctorOnboarding = require("../controllers/doctor/doctorOnboarding.controller");
+const doctorStats = require("../controllers/doctor/doctorStats.controller");
+const doctorAppointments = require("../controllers/doctor/doctorAppointment.controller");
+const doctorPatients = require("../controllers/doctor/doctorPatients.controller");
+const doctorClinics = require("../controllers/doctor/doctorClinics.controller");
+const doctorProfile = require("../controllers/doctor/doctorProfile.controller");
+const doctorSubscription = require("../controllers/doctor/doctorSubscription.controller");
+const doctorAssistant = require("../controllers/doctor/doctorAssistant.controller");
 const location = require("../controllers/locationController");
-const doctorAssistantController = require("../controllers/doctor/doctorAssistantController");
 
-// Public
-router.get("/specialties", doctorController.getDoctorSpecialities);
+// Shared validation
+const {
+  idSchema,
+  wilayaIdSchema,
+  patientIdSchema,
+  clinicIdSchema,
+  scheduleIdSchema,
+} = require("../validations/shared/common.validation");
 
-// Wilayas & Communes
+// Doctor validation
+const {
+  completeProfileSchema,
+} = require("../validations/doctor/onboarding.validation");
+
+const {
+  updateProfileSchema,
+  changePasswordSchema,
+  resetPasswordSchema,
+  updateSlotDurationSchema,
+} = require("../validations/doctor/profile.validation");
+
+const {
+  appointmentListQuerySchema,
+} = require("../validations/doctor/appointment.validation");
+
+const {
+  patientListQuerySchema,
+} = require("../validations/doctor/patient.validation");
+
+const {
+  createClinicSchema,
+  updateClinicSchema,
+  createScheduleSchema,
+  updateScheduleSchema,
+  availableClinicQuerySchema,
+} = require("../validations/doctor/clinic.validation");
+
+const {
+  assistantListQuerySchema,
+  createAssistantSchema,
+  updateAssistantSchema,
+} = require("../validations/doctor/assistant.validation");
+
+// PUBLIC
+
+router.get("/specialties", doctorOnboarding.getDoctorSpecialities);
+
+// Wilayas
 router.get("/wilayas", location.getWilayas);
-router.get("/wilayas/:wilayaId/communes", location.getCommunesByWilaya);
+
+// Communes
+router.get(
+  "/wilayas/:wilayaId/communes",
+  validate(wilayaIdSchema, "params"),
+  location.getCommunesByWilaya,
+);
+
+// AUTHENTICATION
 
 router.use(auth(["doctor"]));
 
-// Onboarding
+// ONBOARDING
+
+
 router.post(
   "/complete_profile",
   upload.single("photo"),
-  doctorController.createProfile,
+  validate(completeProfileSchema),
+  doctorOnboarding.createProfile,
 );
 
-// Dashboard stats
+// DASHBOARD
+
 router.get("/stats", doctorStats.getStats);
 
-// Profile
+// PROFILE
+
 router.get("/profile", doctorProfile.getProfile);
-router.patch("/profile", doctorProfile.updateProfile);
+
+router.patch(
+  "/profile",
+  validate(updateProfileSchema),
+  doctorProfile.updateProfile,
+);
+
 router.patch(
   "/profile/photo",
   upload.single("photo"),
   doctorProfile.updatePhoto,
 );
-router.patch("/profile/password", doctorProfile.changePassword);
 
-// Appointments
-router.get("/appointments/today", doctorAppointments.getToday);
-router.get("/appointments", doctorAppointments.getAll);
-router.patch("/appointments/:id/confirm", doctorAppointments.confirm);
-router.patch("/appointments/:id/cancel", doctorAppointments.cancel);
-router.patch("/appointments/:id/complete", doctorAppointments.complete);
+router.patch(
+  "/profile/password",
+  validate(changePasswordSchema),
+  doctorProfile.changePassword,
+);
+
 router.patch(
   "/profile/reset-password",
-  auth(["doctor"]),
+  validate(resetPasswordSchema),
   doctorProfile.resetPassword,
 );
 
-// Patients
-router.get("/patients", doctorPatients.getAll);
-router.get("/patients/:patientId", doctorPatients.getOne);
+router.patch(
+  "/profile/slot-duration",
+  validate(updateSlotDurationSchema),
+  doctorProfile.updateSlotDuration,
+);
 
-// Clinics
-router.get("/clinics/available", doctorClinics.getAvailable);
+// APPOINTMENTS
+
+router.get("/appointments/today", doctorAppointments.getToday);
+
+router.get(
+  "/appointments",
+  validate(appointmentListQuerySchema, "query"),
+  doctorAppointments.getAll,
+);
+
+router.patch(
+  "/appointments/:id/confirm",
+  validate(idSchema, "params"),
+  doctorAppointments.confirm,
+);
+
+router.patch(
+  "/appointments/:id/cancel",
+  validate(idSchema, "params"),
+  doctorAppointments.cancel,
+);
+
+router.patch(
+  "/appointments/:id/complete",
+  validate(idSchema, "params"),
+  doctorAppointments.complete,
+);
+
+// ============================================================
+// PATIENTS
+// ============================================================
+
+router.get(
+  "/patients",
+  validate(patientListQuerySchema, "query"),
+  doctorPatients.getAll,
+);
+
+router.get(
+  "/patients/:patientId",
+  validate(patientIdSchema, "params"),
+  doctorPatients.getOne,
+);
+
+// CLINICS
+
 router.get("/clinics", doctorClinics.getAll);
-router.post("/clinics", doctorClinics.createClinic);
-router.patch("/clinics/:clinicId", doctorClinics.updateClinic);
-router.post("/clinics/:clinicId/schedule", doctorClinics.addSchedule);
-router.patch("/clinics/schedule/:scheduleId", doctorClinics.updateSchedule);
-router.delete("/clinics/schedule/:scheduleId", doctorClinics.removeSchedule);
-router.delete("/clinics/:clinicId", doctorClinics.removeClinic);
 
-router.get("/subscription", auth(["doctor"]), async (req, res) => {
-  const { DoctorSubscription, Plan } = require("../models");
-  const doctor = await require("../models").Doctor.findOne({
-    where: { user_id: req.user.id },
-  });
-  if (!doctor) return res.json(null);
-  const sub = await DoctorSubscription.findOne({
-    where: {
-      doctor_id: doctor.id,
-      status: { [require("sequelize").Op.in]: ["active", "grace", "expired"] },
-    },
-    order: [["created_at", "DESC"]],
-    include: [{ model: Plan, as: "Plan" }],
-  });
-  res.json(sub ?? null);
-});
+router.get(
+  "/clinics/available",
+  validate(availableClinicQuerySchema, "query"),
+  doctorClinics.getAvailable,
+);
+
+// Create private clinic
+router.post(
+  "/clinics",
+  validate(createClinicSchema),
+  doctorClinics.createClinic,
+);
+
+// Update clinic information
+router.patch(
+  "/clinics/:clinicId",
+  validate(clinicIdSchema, "params"),
+  validate(updateClinicSchema),
+  doctorClinics.updateClinic,
+);
+
+// Update clinic photo
+router.patch(
+  "/clinics/:clinicId/photo",
+  validate(clinicIdSchema, "params"),
+  clinicUpload.single("photo"),
+  doctorClinics.updatePhoto,
+);
+
+// Add clinic schedule
+router.post(
+  "/clinics/:clinicId/schedule",
+  validate(clinicIdSchema, "params"),
+  validate(createScheduleSchema),
+  doctorClinics.addSchedule,
+);
+
+// Update clinic schedule
+router.patch(
+  "/clinics/schedule/:scheduleId",
+  validate(scheduleIdSchema, "params"),
+  validate(updateScheduleSchema),
+  doctorClinics.updateSchedule,
+);
+
+// Delete clinic schedule
+router.delete(
+  "/clinics/schedule/:scheduleId",
+  validate(scheduleIdSchema, "params"),
+  doctorClinics.removeSchedule,
+);
+
+// Remove/delete clinic
+router.delete(
+  "/clinics/:clinicId",
+  validate(clinicIdSchema, "params"),
+  doctorClinics.removeClinic,
+);
+
+// SUBSCRIPTION
+
+router.get("/subscription", doctorSubscription.getSubscription);
+
+// ASSISTANTS
+
+router.get(
+  "/assistants",
+  validate(assistantListQuerySchema, "query"),
+  doctorAssistant.getAssistants,
+);
+
+router.get(
+  "/assistants/:id",
+  validate(idSchema, "params"),
+  doctorAssistant.getOne,
+);
+
+router.post(
+  "/assistants",
+  validate(createAssistantSchema),
+  doctorAssistant.createAssistant,
+);
+
+router.patch(
+  "/assistants/:id",
+  validate(idSchema, "params"),
+  validate(updateAssistantSchema),
+  doctorAssistant.updateAssistant,
+);
+
+router.delete(
+  "/assistants/:id",
+  validate(idSchema, "params"),
+  doctorAssistant.deleteAssistant,
+);
+
 module.exports = router;
-
-// Assistants
-router.get("/assistants", doctorAssistantController.getAssistants);
-router.get("/assistants/:id", doctorAssistantController.getOne);
-router.post("/assistants", doctorAssistantController.createAssistant);
-router.patch("/assistants/:id", doctorAssistantController.updateAssistant);
-router.delete("/assistants/:id", doctorAssistantController.deleteAssistant);

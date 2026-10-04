@@ -7,6 +7,7 @@ const {
   DoctorPatient,
   Doctor,
   Clinic,
+  DoctorClinic,
 } = require("../../models");
 const { getPagination, getPagingData } = require("../../helpers/pagination");
 
@@ -14,7 +15,106 @@ const { getPagination, getPagingData } = require("../../helpers/pagination");
 const getAssistant = async (userId) => {
   return Assistant.findOne({ where: { user_id: userId } });
 };
+// helper: generate slots,
+function _generateSlots(startTime, endTime, intervalMinutes) {
+  const slots = [];
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
 
+  let currentMinutes = sh * 60 + sm;
+  const endMinutes = eh * 60 + em;
+
+  while (currentMinutes + intervalMinutes <= endMinutes) {
+    const h = Math.floor(currentMinutes / 60);
+    const m = currentMinutes % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    currentMinutes += intervalMinutes;
+  }
+
+  return slots;
+}
+
+// AVAILABLE SLOTS — for the booking flow, scoped to the assistant's doctor
+exports.getAvailableSlots = async (req, res) => {
+  try {
+    const assistant = await getAssistant(req.user.id);
+    if (!assistant)
+      return res.status(404).json({ message: "Assistant introuvable." });
+
+    const { clinic_id, date } = req.query;
+    if (!clinic_id || !date) {
+      return res.status(400).json({ message: "clinic_id et date requis." });
+    }
+
+    const doctor = await Doctor.findByPk(assistant.doctor_id, {
+      attributes: ["id", "slot_duration"],
+    });
+    if (!doctor)
+      return res.status(404).json({ message: "Médecin introuvable." });
+
+    const duration = doctor.slot_duration || 30;
+
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const dayOfWeek = days[new Date(date).getDay()];
+
+    const schedule = await DoctorClinic.findOne({
+      where: {
+        doctor_id: assistant.doctor_id,
+        clinic_id,
+        day_of_week: dayOfWeek,
+      },
+    });
+
+    if (!schedule) {
+      return res.json({ slots: [], available: false, reason: "no_schedule" });
+    }
+
+    const allSlots = _generateSlots(
+      schedule.start_time,
+      schedule.end_time,
+      duration,
+    );
+
+    const booked = await Appointment.findAll({
+      where: {
+        doctor_id: assistant.doctor_id,
+        clinic_id,
+        appointment_date: date,
+        status: { [Op.in]: ["pending", "confirmed"] },
+      },
+      attributes: ["appointment_time"],
+    });
+
+    const bookedTimes = new Set(
+      booked.map((a) => a.appointment_time.substring(0, 5)),
+    );
+
+    const slots = allSlots.map((time) => ({
+      time,
+      available: !bookedTimes.has(time),
+    }));
+
+    res.json({
+      date,
+      day_of_week: dayOfWeek,
+      slot_duration: duration,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      slots,
+    });
+  } catch (err) {
+    console.error("getAvailableSlots:", err);
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+};
 // CREATE PATIENT (walk-in, created by an assistant on behalf of their doctor)
 exports.createPatient = async (req, res) => {
   try {
@@ -33,8 +133,6 @@ exports.createPatient = async (req, res) => {
     let user = await User.findOne({ where: { phone: cleanPhone } });
 
     if (user) {
-      // Someone already owns this phone with a real, usable account.
-      // Don't silently reuse it here — that's an identity decision, not ours to make.
       if (user.password_hash) {
         return res.status(409).json({
           message:
@@ -185,14 +283,8 @@ exports.getPatient = async (req, res) => {
         },
         {
           model: Appointment,
-          // No "as" here: Patient.hasMany(Appointment) in index.js has no
-          // explicit alias, so the include must stay unaliased too.
+
           include: [
-            // Nested so the frontend's `a.Doctor?.user?.full_name` resolves.
-            // Appointment.belongsTo(Doctor) has no alias either -> plain
-            // `model: Doctor`, no "as". The User under Doctor DOES need
-            // "as: user" because Doctor->User is explicitly aliased twice
-            // in index.js (one aliased, one not), so it's ambiguous otherwise.
             {
               model: Doctor,
               include: [

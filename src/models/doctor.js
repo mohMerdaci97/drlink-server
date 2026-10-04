@@ -31,6 +31,14 @@ module.exports = (sequelize) => {
         allowNull: false,
         references: { model: "users", key: "id" },
       },
+      slot_duration: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 30,
+        validate: {
+          isIn: [[15, 20, 30, 45, 60, 90]],
+        },
+      },
     },
     {
       tableName: "doctors",

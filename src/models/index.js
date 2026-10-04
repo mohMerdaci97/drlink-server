@@ -14,8 +14,9 @@ const DoctorSubscription = require("./doctorSubscription")(sequelize);
 const SubscriptionPayment = require("./subscriptionPayment")(sequelize);
 const Assistant = require("./assistant")(sequelize);
 const DoctorPatient = require("./doctorPatient")(sequelize);
+const AuditLog = require("./AuditLog")(sequelize);
 
-// ── User ↔ Patient 
+// ── User ↔ Patient
 User.hasOne(Patient, {
   foreignKey: "user_id",
   onDelete: "CASCADE",
@@ -138,8 +139,6 @@ Patient.hasMany(DoctorPatient, {
 });
 DoctorPatient.belongsTo(Patient, { foreignKey: "patient_id", as: "patient" });
 
-// Who (which assistant/user) created this walk-in link — nullable, app-sourced
-// links won't have one.
 DoctorPatient.belongsTo(User, {
   foreignKey: "added_by_user_id",
   as: "addedBy",
@@ -161,4 +160,5 @@ module.exports = {
   DoctorPatient,
   DoctorSubscription,
   SubscriptionPayment,
+  AuditLog,
 };

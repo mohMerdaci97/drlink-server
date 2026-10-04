@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 const auth = require("../middlewares/authMiddleware");
 
-const homeData = require("../controllers/patientHomeController");
+const homeData = require("../controllers/patient/patientHomeController");
 const doctorsCtrl = require("../controllers/patient/patientDoctorsController");
 const appointmentsCtrl = require("../controllers/patient/patientAppointmentsController");
 const profileCtrl = require("../controllers/patient/patientProfileController");

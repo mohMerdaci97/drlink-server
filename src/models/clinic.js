@@ -33,6 +33,10 @@ module.exports = (sequelize) => {
       phone: {
         type: DataTypes.STRING(20),
       },
+      photo: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       created_by_doctor_id: {
         type: DataTypes.INTEGER,
         allowNull: true,

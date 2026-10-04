@@ -17,7 +17,7 @@ exports.getDoctors = async (req, res) => {
       req.headers["accept-language"]?.split(",")[0]?.split("-")[0] || "ar";
     const { specialty_id, wilaya_id, search, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
- 
+
     const where = { is_approved: true };
 
     if (specialty_id) where.specialty_id = specialty_id;
@@ -85,6 +85,7 @@ exports.getDoctors = async (req, res) => {
         photo_url: d.photo_url,
         location: wilayaName ?? clinic?.name ?? null,
         wilaya_id: clinic?.wilaya_id ?? null,
+        slot_duration: d.slot_duration,
         rating: 4.8,
         reviews: 0,
         available: true,
@@ -171,6 +172,7 @@ exports.getDoctorDetail = async (req, res) => {
       specialty_id: doctor.specialty_id,
       description: doctor.description,
       photo_url: doctor.photo_url,
+      slot_duration: doctor.slot_duration,
       rating: 4.8,
       reviews: 0,
       clinics,
@@ -191,7 +193,17 @@ exports.getAvailableSlots = async (req, res) => {
       return res.status(400).json({ message: "clinic_id and date required" });
     }
 
-    // day of week from date string
+    const doctor = await Doctor.findOne({
+      where: { id },
+      attributes: ["id", "slot_duration"],
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    const duration = doctor.slot_duration || 30;
+
     const days = [
       "Sunday",
       "Monday",
@@ -215,10 +227,13 @@ exports.getAvailableSlots = async (req, res) => {
       return res.json({ slots: [], available: false, reason: "no_schedule" });
     }
 
-    // generate all slots every 30 min between start and end
-    const allSlots = _generateSlots(schedule.start_time, schedule.end_time, 30);
+    // generate slots using this doctor's own slot duration
+    const allSlots = _generateSlots(
+      schedule.start_time,
+      schedule.end_time,
+      duration,
+    );
 
-    // find already booked slots for this doctor + clinic + date
     const booked = await Appointment.findAll({
       where: {
         doctor_id: id,
@@ -243,6 +258,7 @@ exports.getAvailableSlots = async (req, res) => {
       day_of_week: dayOfWeek,
       clinic_id: parseInt(clinic_id),
       doctor_id: parseInt(id),
+      slot_duration: duration,
       start_time: schedule.start_time,
       end_time: schedule.end_time,
       slots,
@@ -287,7 +303,7 @@ exports.getWilayas = async (req, res) => {
   }
 };
 
-// helper: generate 30-min slots
+// helper: generate slots, stopping once a slot would run past closing time
 function _generateSlots(startTime, endTime, intervalMinutes) {
   const slots = [];
   const [sh, sm] = startTime.split(":").map(Number);
@@ -296,7 +312,7 @@ function _generateSlots(startTime, endTime, intervalMinutes) {
   let currentMinutes = sh * 60 + sm;
   const endMinutes = eh * 60 + em;
 
-  while (currentMinutes < endMinutes) {
+  while (currentMinutes + intervalMinutes <= endMinutes) {
     const h = Math.floor(currentMinutes / 60);
     const m = currentMinutes % 60;
     slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
@@ -412,6 +428,7 @@ exports.getNearbyDoctors = async (req, res) => {
         lng: parseFloat(clinic?.longitude),
         distance_km: Math.round(dist * 10) / 10,
         photo_url: d.photo_url,
+        slot_duration: d.slot_duration,
         rating: 4.8,
         available: true,
       };
