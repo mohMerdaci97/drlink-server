@@ -10,7 +10,9 @@ module.exports = (roles = []) => {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+        algorithms: ["HS256"],
+      });
       req.user = decoded;
 
       if (roles.length && !roles.includes(decoded.role)) {

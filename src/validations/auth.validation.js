@@ -11,6 +11,8 @@ const loginSchema = z
       .string()
       .min(1, "Mot de passe requis.")
       .max(128, "Mot de passe trop long."),
+
+    turnstileToken: z.string().min(1, "Vérification anti-robot requise."),
   })
   .strict();
 

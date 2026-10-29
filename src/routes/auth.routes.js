@@ -9,10 +9,13 @@ const { loginLimiter } = require("../middlewares/rateLimiters");
 
 const { loginSchema } = require("../validations/auth.validation");
 
+const turnstile = require("../middlewares/security/turnstile.middleware");
+
 router.post(
   "/login",
   loginLimiter,
   validate(loginSchema, "body"),
+  turnstile,
   controller.login,
 );
 

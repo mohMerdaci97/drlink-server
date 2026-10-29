@@ -1,4 +1,5 @@
 const sequelize = require("../config/database");
+const refreshToken = require("./refreshToken");
 
 const User = require("./user")(sequelize);
 const Patient = require("./patient")(sequelize);
@@ -15,6 +16,7 @@ const SubscriptionPayment = require("./subscriptionPayment")(sequelize);
 const Assistant = require("./assistant")(sequelize);
 const DoctorPatient = require("./doctorPatient")(sequelize);
 const AuditLog = require("./AuditLog")(sequelize);
+const RefreshToken = require("./refreshToken")(sequelize);
 
 // ── User ↔ Patient
 User.hasOne(Patient, {
@@ -34,7 +36,7 @@ User.hasOne(Doctor, {
 Doctor.belongsTo(User, { foreignKey: "user_id" });
 Doctor.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-// ── Specialty ↔ Doctor ───────────────────────────────────────────────────────
+// Specialty ↔ Doctor
 Specialty.hasMany(Doctor, { foreignKey: "specialty_id" });
 Doctor.belongsTo(Specialty, { foreignKey: "specialty_id" });
 
@@ -56,7 +58,7 @@ Clinic.hasMany(DoctorClinic, { foreignKey: "clinic_id", onDelete: "CASCADE" });
 DoctorClinic.belongsTo(Doctor, { foreignKey: "doctor_id" });
 DoctorClinic.belongsTo(Clinic, { foreignKey: "clinic_id" });
 
-// ── Appointments ─────────────────────────────────────────────────────────────
+//  Appointments
 Doctor.hasMany(Appointment, { foreignKey: "doctor_id" });
 Patient.hasMany(Appointment, { foreignKey: "patient_id" });
 Clinic.hasMany(Appointment, { foreignKey: "clinic_id" });
@@ -64,35 +66,35 @@ Appointment.belongsTo(Doctor, { foreignKey: "doctor_id" });
 Appointment.belongsTo(Patient, { foreignKey: "patient_id" });
 Appointment.belongsTo(Clinic, { foreignKey: "clinic_id" });
 
-// ── Clinic ↔ Wilaya ──────────────────────────────────────────────────────────
+//  Clinic ↔ Wilaya
+
 // Two aliases: uppercase (admin) + lowercase (patient)
 Clinic.belongsTo(Wilaya, { foreignKey: "wilaya_id", as: "Wilaya" });
 Clinic.belongsTo(Wilaya, { foreignKey: "wilaya_id", as: "wilaya" });
 Wilaya.hasMany(Clinic, { foreignKey: "wilaya_id", as: "Clinics" });
 Wilaya.hasMany(Clinic, { foreignKey: "wilaya_id", as: "clinics" });
 
-// ── Clinic ↔ Commune ─────────────────────────────────────────────────────────
-
+// Clinic ↔ Commune
 Clinic.belongsTo(Commune, { foreignKey: "commune_id", as: "Commune" });
 Clinic.belongsTo(Commune, { foreignKey: "commune_id", as: "commune" });
 Commune.hasMany(Clinic, { foreignKey: "commune_id", as: "Clinics" });
 Commune.hasMany(Clinic, { foreignKey: "commune_id", as: "clinics" });
 
-// ── Plan → DoctorSubscription ────────────────────────────────────────────────
+// ── Plan → DoctorSubscription
 Plan.hasMany(DoctorSubscription, {
   foreignKey: "plan_id",
   as: "Subscriptions",
 });
 DoctorSubscription.belongsTo(Plan, { foreignKey: "plan_id", as: "Plan" });
 
-// ── Doctor → DoctorSubscription ──────────────────────────────────────────────
+// ── Doctor → DoctorSubscription
 Doctor.hasMany(DoctorSubscription, {
   foreignKey: "doctor_id",
   as: "Subscriptions",
 });
 DoctorSubscription.belongsTo(Doctor, { foreignKey: "doctor_id", as: "Doctor" });
 
-// ── DoctorSubscription → SubscriptionPayment ─────────────────────────────────
+// ── DoctorSubscription → SubscriptionPayment
 DoctorSubscription.hasMany(SubscriptionPayment, {
   foreignKey: "subscription_id",
   as: "Payments",
@@ -101,14 +103,14 @@ SubscriptionPayment.belongsTo(DoctorSubscription, {
   foreignKey: "subscription_id",
 });
 
-// ── SubscriptionPayment → Doctor ─────────────────────────────────────────────
+// ── SubscriptionPayment → Doctor
 SubscriptionPayment.belongsTo(Doctor, { foreignKey: "doctor_id" });
 SubscriptionPayment.belongsTo(Doctor, {
   foreignKey: "doctor_id",
   as: "doctor",
 });
 
-// ── SubscriptionPayment → Plan ───────────────────────────────────────────────
+// ── SubscriptionPayment → Plan
 SubscriptionPayment.belongsTo(Plan, { foreignKey: "plan_id" });
 SubscriptionPayment.belongsTo(Plan, { foreignKey: "plan_id", as: "plan" });
 
@@ -143,6 +145,9 @@ DoctorPatient.belongsTo(User, {
   foreignKey: "added_by_user_id",
   as: "addedBy",
 });
+// ── User ↔ RefreshToken
+User.hasMany(RefreshToken, { foreignKey: "user_id", onDelete: "CASCADE" });
+RefreshToken.belongsTo(User, { foreignKey: "user_id" });
 
 module.exports = {
   sequelize,
@@ -161,4 +166,5 @@ module.exports = {
   DoctorSubscription,
   SubscriptionPayment,
   AuditLog,
+  RefreshToken,
 };

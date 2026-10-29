@@ -13,8 +13,10 @@ module.exports = (sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      date_of_birth: DataTypes.DATE,
+      date_of_birth: DataTypes.DATEONLY,
       gender: DataTypes.STRING(10),
+      wilaya_id: { type: DataTypes.INTEGER, allowNull: true },
+      commune_id: { type: DataTypes.INTEGER, allowNull: true },
     },
     {
       tableName: "patients",

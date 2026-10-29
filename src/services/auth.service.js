@@ -110,9 +110,6 @@ exports.login = async ({ phone, password, req }) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
-  // IMPORTANT:
-  // req.user does not exist yet during login.
-  // Therefore userId and role must be passed explicitly.
   await auditService.logRequest({
     req,
     action: "LOGIN_SUCCESS",

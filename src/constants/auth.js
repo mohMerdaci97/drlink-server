@@ -1,0 +1,5 @@
+module.exports = {
+  BCRYPT_ROUNDS: 12,
+  REFRESH_TOKEN_DAYS: 30,
+  REFRESH_REUSE_GRACE_SECONDS: 10,
+};

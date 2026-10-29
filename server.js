@@ -10,14 +10,13 @@ const morgan = require("morgan");
 const sequelize = require("./src/config/database");
 require("./src/models");
 
-const authRoutes = require("./src/routes/authRoutes");
-const locationRoutes = require("./src/routes/locationRoutes");
-const adminRoutes = require("./src/routes/adminRoutes");
-const userRoutes = require("./src/routes/userRoutes");
-const doctorRoutes = require("./src/routes/doctorRoutes");
-const patientAuthRoutes = require("./src/routes/patientAuthRoutes");
-const patientRoutes = require("./src/routes/patientRoutes");
-const assistantRoutes = require("./src/routes/assistantRoutes");
+const authRoutes = require("./src/routes/auth.routes");
+const locationRoutes = require("./src/routes/location.routes");
+const adminRoutes = require("./src/routes/admin.routes");
+const doctorRoutes = require("./src/routes/doctor.routes");
+const patientAuthRoutes = require("./src/routes/patientAuth.routes");
+const patientRoutes = require("./src/routes/patient.routes");
+const assistantRoutes = require("./src/routes/assistant.routes");
 
 const app = express();
 
@@ -59,7 +58,6 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/auth", authRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/user", userRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/patient/auth", patientAuthRoutes);
 app.use("/api/patient", patientRoutes);
@@ -87,6 +85,6 @@ app.use((err, req, res, next) => {
       console.log(`Server running on port ${process.env.PORT || 5000}`);
     });
   } catch (err) {
-    console.error("❌ DB connection failed:", err.message);
+    console.error("DB connection failed:", err.message);
   }
 })();
