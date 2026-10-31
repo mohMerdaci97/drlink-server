@@ -18,20 +18,24 @@ const patientAuthRoutes = require("./src/routes/patientAuth.routes");
 const patientRoutes = require("./src/routes/patient.routes");
 const assistantRoutes = require("./src/routes/assistant.routes");
 
+const PORT = process.env.PORT || 5000;
+const isProduction = process.env.NODE_ENV === "production";
+
 const app = express();
 
-//  Security headers
+// No ETag: avoids 304 responses on the JSON API
+app.set("etag", false);
+
+// Security headers
 app.use(helmet());
 
-//  Logger (dev only)
-if (process.env.NODE_ENV !== "production") {
+// Logger (dev only)
+if (!isProduction) {
   app.use(morgan("dev"));
 }
 
-//  Cookies
 app.use(cookieParser());
 
-//  CORS
 app.use(
   cors({
     origin: true,
@@ -39,22 +43,31 @@ app.use(
   }),
 );
 
-//  Body parsing
+// Body parsing
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-//  Global rate limiter
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 100 : 500,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api", limiter);
+// Global rate limiter
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: isProduction ? 100 : 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+);
 
+// clients never cache API responses 
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
+// Static files 
 app.use("/uploads", express.static("uploads"));
 
-//  Routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/admin", adminRoutes);
@@ -64,27 +77,31 @@ app.use("/api/patient", patientRoutes);
 app.use("/api/assistant", assistantRoutes);
 
 app.get("/", (req, res) => {
-  res.send("DrLink API is running ");
+  res.send("DrLink API is running");
 });
 
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+// Error handler must be last
 app.use((err, req, res, next) => {
   console.error("GLOBAL ERROR:", err);
   res.status(500).json({ message: "Internal server error" });
 });
 
+
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log(" Database connected");
+    console.log("Database connected");
 
-    app.listen(process.env.PORT || 5000, "0.0.0.0", () => {
-      console.log(`Server running on port ${process.env.PORT || 5000}`);
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (err) {
     console.error("DB connection failed:", err.message);
+    process.exit(1);
   }
 })();

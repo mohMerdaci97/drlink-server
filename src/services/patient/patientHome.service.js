@@ -35,11 +35,7 @@ const formatClinic = (clinic, lang, doctorsByClinic) => ({
   doctors_count: doctorsByClinic[clinic.id] || 0,
 });
 
-/**
- * available     = le médecin consulte aujourd'hui dans sa première clinique.
- * available_now = aujourd'hui ET l'heure actuelle est dans le créneau.
- * Les heures sont des chaînes "HH:mm" ou "HH:mm:ss" : la comparaison de chaînes suffit.
- */
+
 const formatDoctor = (doctor, lang, now) => {
   const clinic = doctor.Clinics?.[0];
   const schedule = clinic?.DoctorClinic;

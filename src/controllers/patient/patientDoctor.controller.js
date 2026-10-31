@@ -1,5 +1,5 @@
 const patientDoctorService = require("../../services/patient/patientDoctor.service");
-const { getLang } = require("../../helpers/dateTime");
+const { getLang } = require("../../helpers/lang");
 const { getPagination } = require("../../helpers/pagination");
 
 exports.getDoctors = async (req, res, next) => {
