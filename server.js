@@ -9,6 +9,7 @@ const morgan = require("morgan");
 
 const sequelize = require("./src/config/database");
 require("./src/models");
+const { startAppointmentJobs } = require("./src/jobs/closePastAppointments");
 
 const authRoutes = require("./src/routes/auth.routes");
 const locationRoutes = require("./src/routes/location.routes");
@@ -58,13 +59,13 @@ app.use(
   }),
 );
 
-// clients never cache API responses 
+// clients never cache API responses
 app.use("/api", (req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 });
 
-// Static files 
+// Static files
 app.use("/uploads", express.static("uploads"));
 
 // Routes
@@ -87,16 +88,17 @@ app.use((req, res) => {
 
 // Error handler must be last
 app.use((err, req, res, next) => {
-  console.error("GLOBAL ERROR:", err);
-  res.status(500).json({ message: "Internal server error" });
+  const status = err.statusCode || err.status || 500;
+  if (status >= 500) console.error("GLOBAL ERROR:", err);
+  res.status(status).json({
+    message: status >= 500 ? "Internal server error" : err.message,
+  });
 });
-
-
 (async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connected");
-
+    startAppointmentJobs();
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });

@@ -1,5 +1,8 @@
 const { SLOT_MINUTES, MIN_LEAD_MINUTES } = require("../constants/appointment");
 
+// A missing constant must not turn every slot into "booked"
+const LEAD_MS = (Number(MIN_LEAD_MINUTES) || 0) * 60000;
+
 const toMinutes = (time) => {
   const [h, m] = time.split(":");
   return Number(h) * 60 + Number(m);
@@ -8,7 +11,7 @@ const toMinutes = (time) => {
 const toTime = (minutes) =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 
-// Weekday name  of a YYYY-MM-DD date
+// Weekday name of a YYYY-MM-DD date
 exports.weekdayOf = (date) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -53,7 +56,7 @@ exports.timesOfDay = ({ schedules, duration, date }) => {
 // booked is a Set of "YYYY-MM-DD|HH:mm"
 exports.isFree = ({ booked, date, time }) =>
   !booked.has(`${date}|${time}`) &&
-  exports.toTimestamp(date, time) - Date.now() >= MIN_LEAD_MINUTES * 60000;
+  exports.toTimestamp(date, time) - Date.now() >= LEAD_MS;
 
 // First free slot in the next `days` days, or null
 exports.findNextSlot = ({ schedules, booked, duration, today, days }) => {

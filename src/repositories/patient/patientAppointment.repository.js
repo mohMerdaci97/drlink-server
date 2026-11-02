@@ -30,16 +30,16 @@ const clinicInclude = {
   required: false,
 };
 
+// Active and not started yet: the one definition of "upcoming"
+const upcomingWhere = (today, nowTime) => ({
+  status: { [Op.in]: ACTIVE_STATUSES },
+  [Op.or]: [
+    { appointment_date: { [Op.gt]: today } },
+    { appointment_date: today, appointment_time: { [Op.gte]: nowTime } },
+  ],
+});
 const buildScope = (scope, today, nowTime) => {
-  if (scope === "upcoming") {
-    return {
-      status: { [Op.in]: ACTIVE_STATUSES },
-      [Op.or]: [
-        { appointment_date: { [Op.gt]: today } },
-        { appointment_date: today, appointment_time: { [Op.gte]: nowTime } },
-      ],
-    };
-  }
+  if (scope === "upcoming") return upcomingWhere(today, nowTime);
 
   if (scope === "past") {
     return {
@@ -60,7 +60,12 @@ exports.findPatientByUserId = async (userId) => {
   return Patient.findOne({
     where: { user_id: userId },
     include: [
-      { model: User, as: "user", attributes: ["id", "is_active"], required: false },
+      {
+        model: User,
+        as: "user",
+        attributes: ["id", "is_active"],
+        required: false,
+      },
     ],
   });
 };
@@ -96,8 +101,14 @@ exports.findAndCountByPatient = async ({
     include: [doctorInclude, clinicInclude],
     order:
       scope === "upcoming"
-        ? [["appointment_date", "ASC"], ["appointment_time", "ASC"]]
-        : [["appointment_date", "DESC"], ["appointment_time", "DESC"]],
+        ? [
+            ["appointment_date", "ASC"],
+            ["appointment_time", "ASC"],
+          ]
+        : [
+            ["appointment_date", "DESC"],
+            ["appointment_time", "DESC"],
+          ],
     limit,
     offset,
     distinct: true,
@@ -154,7 +165,13 @@ exports.findBookedTimes = async (doctorId, date) => {
 
 // ── Conflicts and limits ────────────────────────────
 
-exports.findDoctorConflict = async ({ doctorId, date, time, excludeId, transaction }) => {
+exports.findDoctorConflict = async ({
+  doctorId,
+  date,
+  time,
+  excludeId,
+  transaction,
+}) => {
   const where = {
     doctor_id: doctorId,
     appointment_date: date,
@@ -166,7 +183,13 @@ exports.findDoctorConflict = async ({ doctorId, date, time, excludeId, transacti
   return Appointment.findOne({ where, transaction });
 };
 
-exports.findPatientConflict = async ({ patientId, date, time, excludeId, transaction }) => {
+exports.findPatientConflict = async ({
+  patientId,
+  date,
+  time,
+  excludeId,
+  transaction,
+}) => {
   const where = {
     patient_id: patientId,
     appointment_date: date,
@@ -178,26 +201,29 @@ exports.findPatientConflict = async ({ patientId, date, time, excludeId, transac
   return Appointment.findOne({ where, transaction });
 };
 
-exports.countActiveByPatient = async (patientId, transaction) => {
+// Only future appointments count toward the limits
+exports.countActiveByPatient = async (patientId, now, transaction) => {
   return Appointment.count({
-    where: { patient_id: patientId, status: { [Op.in]: ACTIVE_STATUSES } },
+    where: { patient_id: patientId, ...upcomingWhere(now.date, now.time) },
     transaction,
   });
 };
 
-exports.countActiveByPatientAndDoctor = async (patientId, doctorId, transaction) => {
+exports.countActiveByPatientAndDoctor = async (
+  patientId,
+  doctorId,
+  now,
+  transaction,
+) => {
   return Appointment.count({
     where: {
       patient_id: patientId,
       doctor_id: doctorId,
-      status: { [Op.in]: ACTIVE_STATUSES },
+      ...upcomingWhere(now.date, now.time),
     },
     transaction,
   });
 };
-
-
-
 exports.create = async (data, options = {}) => {
   return Appointment.create(data, options);
 };

@@ -134,7 +134,9 @@ const validateSlot = async ({
   );
   const validTimes = schedules
     .filter((s) => s.day_of_week === weekdayOf(date))
-    .flatMap((s) => generateSlots(s.start_time, s.end_time));
+    .flatMap((s) =>
+      generateSlots(s.start_time, s.end_time, doctor.slot_duration),
+    );
 
   if (!validTimes.includes(time)) {
     throw createError(400, "Le médecin ne consulte pas à cette heure.");
@@ -162,7 +164,7 @@ const validateSlot = async ({
   }
 };
 
-// ── Service ─────────────────────────────────────────
+// Service
 
 exports.getMyAppointments = async (
   userId,
@@ -249,6 +251,7 @@ exports.create = async (userId, data) => {
 
   const patient = await getPatientOrFail(userId);
   const transaction = await sequelize.transaction();
+  const now = getNowInAlgiers();
 
   try {
     // Lock first: parallel bookings of this patient wait here
@@ -280,6 +283,7 @@ exports.create = async (userId, data) => {
 
     const activeCount = await patientAppointmentRepository.countActiveByPatient(
       patient.id,
+      now,
       transaction,
     );
     if (activeCount >= MAX_ACTIVE_PER_PATIENT) {
@@ -293,6 +297,7 @@ exports.create = async (userId, data) => {
       await patientAppointmentRepository.countActiveByPatientAndDoctor(
         patient.id,
         doctor_id,
+        now,
         transaction,
       );
     if (doctorCount >= MAX_ACTIVE_PER_DOCTOR) {
@@ -318,7 +323,7 @@ exports.create = async (userId, data) => {
         clinic_id,
         appointment_date,
         appointment_time,
-        status: STATUS.PENDING,
+        status: STATUS.CONFIRMED,
       },
       { transaction },
     );
@@ -367,11 +372,15 @@ exports.reschedule = async (userId, id, data) => {
       transaction,
     });
 
-    // New time must be confirmed again by the clinic
+    // Stays confirmed: no doctor approval step
     const affected = await patientAppointmentRepository.updateIfActive({
       id: appointment.id,
       patientId: patient.id,
-      data: { appointment_date, appointment_time, status: STATUS.PENDING },
+      data: {
+        appointment_date,
+        appointment_time,
+        status: STATUS.CONFIRMED,
+      },
       transaction,
     });
 

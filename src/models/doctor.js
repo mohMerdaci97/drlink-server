@@ -36,7 +36,7 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 30,
         validate: {
-          isIn: [[15, 20, 30, 45, 60, 90]],
+          isIn: [[10,15, 20, 30, 45, 60, 90]],
         },
       },
     },
